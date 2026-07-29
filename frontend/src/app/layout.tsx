@@ -8,7 +8,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "OralAce AI - Student Dashboard",
+  title: "Verba AI - Подготовка к устным экзаменам",
   description: "AI-powered oral exam preparation platform",
 };
 

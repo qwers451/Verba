@@ -10,7 +10,31 @@ const apiClient = axios.create({
   },
 });
 
+apiClient.interceptors.request.use((config) => {
+  if (typeof window !== 'undefined') {
+    const token = localStorage.getItem('verba_token');
+    if (token && config.headers) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+  }
+  return config;
+});
+
 export const api = {
+  login: async (email: string, password: string) => {
+    const formData = new URLSearchParams();
+    formData.append('username', email); // OAuth2 expects 'username'
+    formData.append('password', password);
+    const res = await apiClient.post('/auth/token', formData, {
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+    });
+    return res.data;
+  },
+
+  register: async (email: string, password: string, name: string) => {
+    const res = await apiClient.post('/auth/register', { email, password, name });
+    return res.data;
+  },
   getUserProfile: async (): Promise<UserProfile> => {
     const res = await apiClient.get('/user/me');
     return res.data;

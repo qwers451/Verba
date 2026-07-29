@@ -5,7 +5,10 @@ from datetime import datetime
 # User Schemas
 class UserBase(BaseModel):
     email: EmailStr
-    name: str = "Студент"
+    name: str
+
+class UserCreate(UserBase):
+    password: str
 
 class UserProfileResponse(UserBase):
     id: str
@@ -16,6 +19,10 @@ class UserProfileResponse(UserBase):
 
     class Config:
         from_attributes = True
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
 
 # Material Schemas
 class MaterialResponse(BaseModel):

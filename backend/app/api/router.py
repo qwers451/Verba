@@ -24,22 +24,7 @@ from app.services.llm_service import LLMService
 
 router = APIRouter()
 
-# Helper to get or create demo user
-async def get_current_user(db: AsyncSession = Depends(get_db)) -> User:
-    result = await db.execute(select(User).limit(1))
-    user = result.scalars().first()
-    if not user:
-        user = User(
-            email="student@verba.ai",
-            name="Алексей Студент",
-            subscription_status="active_base_tier",
-            monthly_sessions_limit=settings.MONTHLY_SESSION_LIMIT,
-            sessions_used_this_month=1
-        )
-        db.add(user)
-        await db.commit()
-        await db.refresh(user)
-    return user
+from app.api.auth import get_current_user
 
 @router.get("/user/me", response_model=UserProfileResponse)
 async def get_user_profile(user: User = Depends(get_current_user)):

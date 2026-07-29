@@ -1,14 +1,29 @@
 'use client';
 
-import React from 'react';
+import { useEffect } from 'react';
 import { useVerbaStore } from '@/store/useVerbaStore';
 import Sidebar from '@/components/Sidebar';
 import { MaterialUploader } from '@/components/MaterialUploader';
 import { InterviewSimulator } from '@/components/InterviewSimulator';
 import { ReportCard } from '@/components/ReportCard';
+import { LandingPage } from '@/components/LandingPage';
+import { AuthModal } from '@/components/AuthModal';
 
 export default function Home() {
-  const { activeTab } = useVerbaStore();
+  const { activeTab, hydrateAuth } = useVerbaStore();
+
+  useEffect(() => {
+    hydrateAuth();
+  }, [hydrateAuth]);
+
+  if (activeTab === 'landing') {
+    return (
+      <>
+        <LandingPage />
+        <AuthModal />
+      </>
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -22,8 +37,8 @@ export default function Home() {
         {activeTab !== 'interview' && (
           <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-12 gap-4">
             <div>
-              <h1 className="font-headline-lg text-headline-lg-mobile md:text-headline-lg text-on-surface mb-2">Student Dashboard</h1>
-              <p className="font-body-md text-body-md text-on-surface-variant">Welcome back. Here is your recent academic progress.</p>
+              <h1 className="font-headline-lg text-headline-lg-mobile md:text-headline-lg text-on-surface mb-2">Кабинет студента</h1>
+              <p className="font-body-md text-body-md text-on-surface-variant">С возвращением! Здесь находится ваш учебный прогресс.</p>
             </div>
             <button className="md:hidden p-2 rounded-lg bg-surface-container text-primary">
               <span className="material-symbols-outlined">menu</span>
@@ -80,7 +95,7 @@ export default function Home() {
                 <div className="border-l-4 border-l-tertiary-fixed-dim bg-surface-container-lowest p-4 rounded-r-lg shadow-sm">
                   <div className="flex justify-between items-start mb-2">
                     <div>
-                      <h4 className="font-label-md text-label-md text-on-surface font-semibold">Mock Exam: Neuroanatomy</h4>
+                      <h4 className="font-label-md text-label-md text-on-surface font-semibold">Мок-интервью: Основы программирования</h4>
                       <p className="font-label-sm text-label-sm text-on-surface-variant">Вчера, 14:30 • 45 мин</p>
                     </div>
                     <div className="bg-tertiary-container text-on-tertiary-container px-2 py-1 rounded font-label-sm text-label-sm">
@@ -108,6 +123,17 @@ export default function Home() {
            <div className="max-w-4xl mx-auto">
              <ReportCard />
            </div>
+        )}
+
+        {/* Empty States for other tabs */}
+        {['exams', 'coach', 'settings', 'help'].includes(activeTab) && (
+          <div className="flex flex-col items-center justify-center h-full min-h-[60vh] text-center">
+            <span className="material-symbols-outlined text-[64px] text-on-surface-variant/30 mb-4">construction</span>
+            <h2 className="font-headline-md text-headline-md text-on-surface mb-2">В разработке</h2>
+            <p className="font-body-md text-body-md text-on-surface-variant max-w-md">
+              Этот раздел находится в стадии разработки. Скоро здесь появится новый функционал.
+            </p>
+          </div>
         )}
 
       </main>

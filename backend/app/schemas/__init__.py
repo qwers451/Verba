@@ -1,5 +1,8 @@
 from app.schemas.schemas import (
+    UserBase,
+    UserCreate,
     UserProfileResponse,
+    Token,
     MaterialResponse,
     InterviewStartRequest,
     InterviewSessionResponse,
@@ -11,7 +14,10 @@ from app.schemas.schemas import (
 )
 
 __all__ = [
+    "UserBase",
+    "UserCreate",
     "UserProfileResponse",
+    "Token",
     "MaterialResponse",
     "InterviewStartRequest",
     "InterviewSessionResponse",

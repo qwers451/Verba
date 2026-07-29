@@ -1,57 +1,76 @@
 'use client';
 
 import React from 'react';
-import Link from 'next/link';
+import { useVerbaStore } from '@/store/useVerbaStore';
 
 export default function Sidebar() {
+  const { activeTab, setActiveTab, logout } = useVerbaStore();
+
+  const handleLogout = () => {
+    logout();
+  };
+
   return (
-    <nav className="bg-surface-container-low text-primary font-label-md text-label-md h-screen w-64 fixed left-0 top-0 flex flex-col p-base gap-base hidden md:flex border-r border-surface-container-high z-10">
+    <nav className="bg-surface-container-lowest text-on-surface font-label-md text-label-md h-screen w-64 fixed left-0 top-0 flex flex-col p-4 gap-4 hidden md:flex border-r border-outline-variant/30 z-10 shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
       {/* Header */}
-      <div className="px-4 py-6 flex items-center gap-3">
-        <div className="w-10 h-10 rounded-lg bg-primary-container text-on-primary-container flex items-center justify-center font-bold font-headline-md text-headline-md">
-          OA
+      <div className="px-2 py-4 flex items-center gap-3">
+        <div className="w-10 h-10 rounded-xl bg-primary text-on-primary flex items-center justify-center font-bold font-headline-md text-headline-md shadow-sm">
+          VA
         </div>
         <div>
-          <div className="font-headline-md text-[18px] font-bold text-primary">Study Workspace</div>
-          <div className="font-label-sm text-label-sm text-on-surface-variant">Academic Mode</div>
+          <div className="font-headline-md text-[18px] font-bold text-primary tracking-tight">Verba AI</div>
+          <div className="font-label-sm text-label-sm text-on-surface-variant">Кабинет студента</div>
         </div>
-      </div>
-
-      {/* CTA */}
-      <div className="px-2 mb-6">
-        <button className="w-full bg-secondary text-on-secondary rounded-lg py-3 px-4 flex items-center justify-center gap-2 hover:opacity-90 transition-opacity shadow-sm">
-          <span className="material-symbols-outlined text-[20px]">add</span>
-          Start New Mock Interview
-        </button>
       </div>
 
       {/* Navigation Links */}
-      <div className="flex-1 flex flex-col gap-1 px-2">
-        {/* Active Tab: Home */}
-        <Link href="/" className="flex items-center gap-3 px-4 py-3 bg-secondary-container text-on-secondary-container rounded-lg group active:scale-[0.98] transition-transform">
-          <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>home</span>
-          Home
-        </Link>
-        <Link href="#" className="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-all group">
-          <span className="material-symbols-outlined">record_voice_over</span>
-          My Exams
-        </Link>
-        <Link href="#" className="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-all group">
-          <span className="material-symbols-outlined">psychology</span>
-          AI Coach
-        </Link>
-        <Link href="#" className="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-all group">
-          <span className="material-symbols-outlined">settings</span>
-          Settings
-        </Link>
+      <div className="flex-1 flex flex-col gap-1.5 px-2 mt-4">
+        <button 
+          onClick={() => setActiveTab('dashboard')}
+          className={`flex items-center gap-3 px-4 py-3 rounded-xl group transition-all duration-200 ${activeTab === 'dashboard' ? 'bg-primary-container text-on-primary-container font-semibold' : 'text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface'}`}
+        >
+          <span className="material-symbols-outlined" style={{ fontVariationSettings: activeTab === 'dashboard' ? "'FILL' 1" : "'FILL' 0" }}>home</span>
+          Главная
+        </button>
+        <button 
+          onClick={() => setActiveTab('exams')}
+          className={`flex items-center gap-3 px-4 py-3 rounded-xl group transition-all duration-200 ${activeTab === 'exams' ? 'bg-primary-container text-on-primary-container font-semibold' : 'text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface'}`}
+        >
+          <span className="material-symbols-outlined" style={{ fontVariationSettings: activeTab === 'exams' ? "'FILL' 1" : "'FILL' 0" }}>record_voice_over</span>
+          Мои экзамены
+        </button>
+        <button 
+          onClick={() => setActiveTab('coach')}
+          className={`flex items-center gap-3 px-4 py-3 rounded-xl group transition-all duration-200 ${activeTab === 'coach' ? 'bg-primary-container text-on-primary-container font-semibold' : 'text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface'}`}
+        >
+          <span className="material-symbols-outlined" style={{ fontVariationSettings: activeTab === 'coach' ? "'FILL' 1" : "'FILL' 0" }}>psychology</span>
+          AI Тренер
+        </button>
+        <button 
+          onClick={() => setActiveTab('settings')}
+          className={`flex items-center gap-3 px-4 py-3 rounded-xl group transition-all duration-200 ${activeTab === 'settings' ? 'bg-primary-container text-on-primary-container font-semibold' : 'text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface'}`}
+        >
+          <span className="material-symbols-outlined" style={{ fontVariationSettings: activeTab === 'settings' ? "'FILL' 1" : "'FILL' 0" }}>settings</span>
+          Настройки
+        </button>
       </div>
 
       {/* Footer Tab */}
-      <div className="px-2 mt-auto pb-4">
-        <Link href="#" className="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-all group">
-          <span className="material-symbols-outlined">help</span>
-          Help Center
-        </Link>
+      <div className="px-2 mt-auto pb-4 flex flex-col gap-1.5">
+        <button 
+          onClick={() => setActiveTab('help')}
+          className={`flex items-center gap-3 px-4 py-3 rounded-xl group transition-all duration-200 ${activeTab === 'help' ? 'bg-primary-container text-on-primary-container font-semibold' : 'text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface'}`}
+        >
+          <span className="material-symbols-outlined" style={{ fontVariationSettings: activeTab === 'help' ? "'FILL' 1" : "'FILL' 0" }}>help</span>
+          Помощь
+        </button>
+        <button 
+          onClick={handleLogout}
+          className="flex items-center gap-3 px-4 py-3 text-error hover:bg-error-container hover:text-on-error-container rounded-xl transition-all group"
+        >
+          <span className="material-symbols-outlined">logout</span>
+          Выйти
+        </button>
       </div>
     </nav>
   );

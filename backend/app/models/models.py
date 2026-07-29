@@ -13,6 +13,7 @@ class User(Base):
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
+    hashed_password: Mapped[str] = mapped_column(String(255), nullable=True) # temporarily nullable for existing DB
     name: Mapped[str] = mapped_column(String(255), default="Студент")
     subscription_status: Mapped[str] = mapped_column(String(50), default="active_tier") # active_tier / free
     monthly_sessions_limit: Mapped[int] = mapped_column(Integer, default=15)

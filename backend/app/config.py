@@ -7,8 +7,8 @@ class Settings(BaseSettings):
     VERSION: str = "1.0.0"
     API_V1_STR: str = "/api/v1"
 
-    # Database - PostgreSQL with pgvector
-    DATABASE_URL: str = os.getenv("DATABASE_URL", "postgresql+asyncpg://postgres:postgrespassword@localhost:5432/verba")
+    # Database - Temporary SQLite for local testing without Docker
+    DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./verba.db")
     
     # LLM Settings
     OPENAI_API_KEY: Optional[str] = os.getenv("OPENAI_API_KEY", None)

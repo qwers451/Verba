@@ -26,6 +26,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from app.api.auth import router as auth_router
+
+app.include_router(auth_router, prefix=f"{settings.API_V1_STR}/auth")
 app.include_router(router, prefix=settings.API_V1_STR)
 
 @app.get("/")

@@ -4,8 +4,17 @@ import { api } from '@/lib/api';
 
 interface VerbaState {
   // Navigation View
-  activeTab: 'dashboard' | 'interview' | 'report';
-  setActiveTab: (tab: 'dashboard' | 'interview' | 'report') => void;
+  activeTab: 'landing' | 'dashboard' | 'interview' | 'report' | 'exams' | 'coach' | 'settings' | 'help';
+  setActiveTab: (tab: 'landing' | 'dashboard' | 'interview' | 'report' | 'exams' | 'coach' | 'settings' | 'help') => void;
+
+  // Auth
+  isAuthModalOpen: boolean;
+  setAuthModalOpen: (open: boolean) => void;
+  token: string | null;
+  login: (email: string, password: string) => Promise<void>;
+  register: (email: string, password: string, name: string) => Promise<void>;
+  logout: () => void;
+  hydrateAuth: () => void;
 
   // User & Quota
   user: UserProfile | null;
@@ -41,8 +50,47 @@ interface VerbaState {
 }
 
 export const useVerbaStore = create<VerbaState>((set, get) => ({
-  activeTab: 'dashboard',
+  activeTab: 'landing',
   setActiveTab: (tab) => set({ activeTab: tab }),
+
+  isAuthModalOpen: false,
+  setAuthModalOpen: (open) => set({ isAuthModalOpen: open }),
+  token: null,
+  login: async (email, password) => {
+    try {
+      const res = await api.login(email, password);
+      localStorage.setItem('verba_token', res.access_token);
+      set({ token: res.access_token, isAuthModalOpen: false, activeTab: 'dashboard' });
+      await get().fetchUser();
+      await get().fetchMaterials();
+    } catch (err: any) {
+      throw new Error(err.response?.data?.detail || 'Ошибка авторизации');
+    }
+  },
+  register: async (email, password, name) => {
+    try {
+      await api.register(email, password, name);
+      const res = await api.login(email, password);
+      localStorage.setItem('verba_token', res.access_token);
+      set({ token: res.access_token, isAuthModalOpen: false, activeTab: 'dashboard' });
+      await get().fetchUser();
+      await get().fetchMaterials();
+    } catch (err: any) {
+      throw new Error(err.response?.data?.detail || 'Ошибка регистрации');
+    }
+  },
+  logout: () => {
+    localStorage.removeItem('verba_token');
+    set({ token: null, user: null, materials: [], activeSession: null, activeTab: 'landing' });
+  },
+  hydrateAuth: () => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('verba_token') : null;
+    if (token) {
+      set({ token });
+      get().fetchUser().catch(() => get().logout());
+      get().fetchMaterials();
+    }
+  },
 
   user: null,
   isLoadingUser: false,
@@ -54,6 +102,7 @@ export const useVerbaStore = create<VerbaState>((set, get) => ({
     } catch (err) {
       console.error('Error fetching user:', err);
       set({ isLoadingUser: false });
+      throw err;
     }
   },
 
