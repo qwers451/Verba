@@ -1,76 +1,122 @@
 @import "tailwindcss";
 
-:root {
-  --bg-main: #0B0F19;
-  --bg-card: rgba(17, 24, 39, 0.7);
-  --border-card: rgba(255, 255, 255, 0.08);
-  --primary-accent: #6366f1;
-  --secondary-accent: #a855f7;
+@theme {
+  --color-surface: #f8f9ff;
+  --color-surface-dim: #cbdbf5;
+  --color-surface-bright: #f8f9ff;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #eff4ff;
+  --color-surface-container: #e5eeff;
+  --color-surface-container-high: #dce9ff;
+  --color-surface-container-highest: #d3e4fe;
+  --color-on-surface: #0b1c30;
+  --color-on-surface-variant: #464652;
+  --color-inverse-surface: #213145;
+  --color-inverse-on-surface: #eaf1ff;
+  --color-outline: #777683;
+  --color-outline-variant: #c7c5d4;
+  --color-surface-tint: #4f54b4;
+  --color-primary: #15157d;
+  --color-on-primary: #ffffff;
+  --color-primary-container: #2e3192;
+  --color-on-primary-container: #9da1ff;
+  --color-inverse-primary: #c0c1ff;
+  --color-secondary: #0056c6;
+  --color-on-secondary: #ffffff;
+  --color-secondary-container: #006df8;
+  --color-on-secondary-container: #fefcff;
+  --color-tertiary: #002f1e;
+  --color-on-tertiary: #ffffff;
+  --color-tertiary-container: #004830;
+  --color-on-tertiary-container: #22c087;
+  --color-error: #ba1a1a;
+  --color-on-error: #ffffff;
+  --color-error-container: #ffdad6;
+  --color-on-error-container: #93000a;
+  --color-primary-fixed: #e1e0ff;
+  --color-primary-fixed-dim: #c0c1ff;
+  --color-on-primary-fixed: #04006d;
+  --color-on-primary-fixed-variant: #373a9b;
+  --color-secondary-fixed: #d9e2ff;
+  --color-secondary-fixed-dim: #b0c6ff;
+  --color-on-secondary-fixed: #001945;
+  --color-on-secondary-fixed-variant: #00429c;
+  --color-tertiary-fixed: #6ffbbe;
+  --color-tertiary-fixed-dim: #4edea3;
+  --color-on-tertiary-fixed: #002113;
+  --color-on-tertiary-fixed-variant: #005236;
+  --color-background: #f8f9ff;
+  --color-on-background: #0b1c30;
+  --color-surface-variant: #d3e4fe;
+  
+  --font-display-lg: "Inter", sans-serif;
+  --font-body-lg: "Inter", sans-serif;
+  --font-label-md: "Inter", sans-serif;
+  --font-headline-md: "Inter", sans-serif;
+  --font-headline-lg: "Inter", sans-serif;
+  --font-label-sm: "Inter", sans-serif;
+  --font-body-md: "Inter", sans-serif;
+  --font-headline-lg-mobile: "Inter", sans-serif;
+
+  --spacing-margin-desktop: 40px;
+  --spacing-base: 8px;
+  --spacing-gutter: 24px;
+  --spacing-container-max: 1280px;
+  --spacing-margin-mobile: 16px;
 }
 
 body {
-  background-color: var(--bg-main);
-  color: #F3F4F6;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-  min-height: 100vh;
-  overflow-x: hidden;
+  font-family: 'Inter', sans-serif;
+  background-color: var(--color-background);
+  color: var(--color-on-background);
 }
 
-/* Glassmorphism containers */
 .glass-card {
-  background: var(--bg-card);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid var(--border-card);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-  border-radius: 1rem;
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.05);
 }
 
-.glass-card-hover {
-  transition: all 0.25s ease-in-out;
-}
-.glass-card-hover:hover {
-  border-color: rgba(99, 102, 241, 0.4);
-  transform: translateY(-2px);
-  box-shadow: 0 12px 40px 0 rgba(99, 102, 241, 0.15);
+.hover-lift { 
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease; 
 }
 
-/* Glowing text and button gradients */
-.gradient-text {
-  background: linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+.hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: 0px 8px 30px rgba(0, 0, 0, 0.08);
+    border-color: rgba(0, 86, 198, 0.1);
 }
 
-.btn-primary {
-  background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
-  color: white;
-  font-weight: 600;
-  padding: 0.75rem 1.5rem;
-  border-radius: 0.75rem;
-  transition: all 0.2s ease;
-  box-shadow: 0 4px 20px rgba(99, 102, 241, 0.35);
-}
-.btn-primary:hover {
-  opacity: 0.92;
-  box-shadow: 0 6px 25px rgba(168, 85, 247, 0.45);
-  transform: scale(1.02);
-}
-.btn-primary:active {
-  transform: scale(0.98);
+.progress-bar-fill {
+    background-color: var(--color-on-tertiary-container);
+    animation: pulse-progress 2s infinite alternate;
 }
 
-/* Custom scrollbars */
-::-webkit-scrollbar {
-  width: 8px;
+@keyframes pulse-progress {
+    0% { opacity: 0.85; }
+    100% { opacity: 1; box-shadow: 0 0 8px rgba(34, 192, 135, 0.4); }
 }
-::-webkit-scrollbar-track {
-  background: #0B0F19;
+
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
 }
-::-webkit-scrollbar-thumb {
-  background: #374151;
-  border-radius: 4px;
+
+.pulse-ring {
+    animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
-::-webkit-scrollbar-thumb:hover {
-  background: #4B5563;
+
+@keyframes pulse-ring {
+    0% { transform: scale(0.8); opacity: 0.5; }
+    100% { transform: scale(1.5); opacity: 0; }
 }
+
+/* Base custom text classes because Tailwind V4 `@theme` doesn't automatically map complex objects like font-size + line-height into simple classes, so we'll just let Tailwind use standard text utilities or map them. Actually, the template uses class="font-headline-lg text-headline-lg", we can just let tailwind use standard CSS for these specific text sizes, or define utility classes here to be safe. */
+.text-display-lg { font-size: 48px; line-height: 1.1; letter-spacing: -0.02em; font-weight: 700; }
+.text-headline-lg { font-size: 32px; line-height: 1.2; letter-spacing: -0.01em; font-weight: 600; }
+.text-headline-lg-mobile { font-size: 24px; line-height: 1.2; font-weight: 600; }
+.text-headline-md { font-size: 24px; line-height: 1.3; font-weight: 600; }
+.text-body-lg { font-size: 18px; line-height: 1.6; font-weight: 400; }
+.text-body-md { font-size: 16px; line-height: 1.5; font-weight: 400; }
+.text-label-md { font-size: 14px; line-height: 1.4; letter-spacing: 0.01em; font-weight: 500; }
+.text-label-sm { font-size: 12px; line-height: 1.2; font-weight: 600; }

@@ -2,7 +2,6 @@
 
 import React, { useRef, useEffect } from 'react';
 import { useVerbaStore } from '@/store/useVerbaStore';
-import { FileUp, FileText, CheckCircle2, Play, AlertCircle, Loader2, Sparkles, Database } from 'lucide-react';
 
 export const MaterialUploader: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -42,13 +41,13 @@ export const MaterialUploader: React.FC = () => {
   };
 
   return (
-    <div className="space-y-8">
-      {/* Upload Banner */}
-      <div
+    <>
+      {/* Upload Section - Spans 4 cols on desktop */}
+      <section 
         onDragOver={handleDragOver}
         onDrop={handleDrop}
         onClick={() => fileInputRef.current?.click()}
-        className="glass-card glass-card-hover border-dashed border-2 border-indigo-500/30 p-8 rounded-2xl text-center cursor-pointer relative overflow-hidden group"
+        className="col-span-1 md:col-span-4 glass-card rounded-xl p-6 hover-lift flex flex-col justify-center items-center text-center bg-gradient-to-b from-surface-container-lowest to-surface-container-low border-dashed border-2 border-outline-variant hover:border-secondary transition-colors relative cursor-pointer"
       >
         <input
           ref={fileInputRef}
@@ -57,123 +56,106 @@ export const MaterialUploader: React.FC = () => {
           className="hidden"
           onChange={handleFileChange}
         />
-
-        <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-pink-500/10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
-
-        <div className="flex flex-col items-center justify-center space-y-4">
-          <div className="w-16 h-16 rounded-2xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 group-hover:scale-110 transition-transform">
-            {isUploading ? (
-              <Loader2 className="w-8 h-8 animate-spin text-indigo-400" />
-            ) : (
-              <FileUp className="w-8 h-8 text-indigo-400" />
-            )}
-          </div>
-
-          <div>
-            <h3 className="text-xl font-bold text-white mb-1">
-              {isUploading ? 'Индексация материала и построение вектора...' : 'Перетащите PDF с учебным материалом'}
-            </h3>
-            <p className="text-sm text-gray-400 max-w-md mx-auto">
-              Загрузите конспект, учебник или лекцию в формате PDF. Система автоматически сформулирует вопросы и проведёт проверку знаний.
-            </p>
-          </div>
-
-          {!isUploading && (
-            <div className="flex items-center gap-2 text-xs text-indigo-300 bg-indigo-500/10 px-3 py-1.5 rounded-full border border-indigo-500/20">
-              <Sparkles className="w-3.5 h-3.5" />
-              Поддерживается автоматический RAG-чанкинг и метаданные страниц
-            </div>
+        <div className="w-16 h-16 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center mb-4">
+          {isUploading ? (
+            <span className="material-symbols-outlined text-[32px] animate-spin">refresh</span>
+          ) : (
+            <span className="material-symbols-outlined text-[32px]">upload_file</span>
           )}
         </div>
-      </div>
-
-      {uploadError && (
-        <div className="flex items-center gap-3 p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-sm">
-          <AlertCircle className="w-5 h-5 shrink-0" />
-          <span>{uploadError}</span>
-        </div>
-      )}
-
-      {/* Materials List */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-bold text-white flex items-center gap-2">
-            <Database className="w-5 h-5 text-indigo-400" />
-            Загруженные учебные материалы ({materials.length})
-          </h3>
-        </div>
-
-        {materials.length === 0 ? (
-          <div className="glass-card p-8 text-center text-gray-400 text-sm">
-            У вас пока нет загруженных материалов. Загрузите PDF-файл выше, чтобы начать подготовку.
+        <h3 className="font-headline-md text-[18px] text-on-surface mb-2">
+          {isUploading ? 'Загрузка и индексация...' : 'Загрузить новый материал'}
+        </h3>
+        <p className="font-body-md text-[14px] text-on-surface-variant mb-6">
+          Загрузите конспект или лекцию (PDF) для генерации новых вопросов к экзамену.
+        </p>
+        
+        {uploadError && (
+          <div className="text-error text-xs mb-4 p-2 bg-error-container rounded">
+            {uploadError}
           </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {materials.map((mat) => {
+        )}
+
+        <button 
+          disabled={isUploading}
+          className="w-full bg-secondary text-on-secondary rounded-lg py-3 px-4 flex items-center justify-center gap-2 hover:opacity-90 transition-opacity font-label-md text-label-md"
+        >
+          <span className="material-symbols-outlined">add</span>
+          Выбрать файл
+        </button>
+      </section>
+
+      {/* Recent Materials List - Spans 6 cols on desktop */}
+      <section className="col-span-1 md:col-span-6 glass-card rounded-xl p-6">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="font-headline-md text-[20px] text-on-surface">Мои материалы</h2>
+          <span className="font-label-sm text-label-sm text-secondary hover:underline cursor-pointer">
+            Все ({materials.length})
+          </span>
+        </div>
+        
+        <div className="flex flex-col gap-3">
+          {materials.length === 0 ? (
+            <div className="text-center text-on-surface-variant p-4 text-sm bg-surface-container-lowest rounded-lg border border-surface-container">
+              Нет загруженных материалов.
+            </div>
+          ) : (
+            materials.map((mat) => {
               const isSelected = selectedMaterial?.id === mat.id;
               return (
-                <div
-                  key={mat.id}
-                  onClick={() => selectMaterial(mat)}
-                  className={`glass-card p-5 rounded-xl cursor-pointer transition-all border ${
-                    isSelected
-                      ? 'border-indigo-500 bg-indigo-950/20 shadow-lg shadow-indigo-500/10'
-                      : 'border-white/5 hover:border-white/20'
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-gray-800 flex items-center justify-center text-indigo-400 shrink-0">
-                        <FileText className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <h4 className="font-semibold text-white text-base line-clamp-1">
-                          {mat.title}
-                        </h4>
-                        <div className="flex items-center gap-3 text-xs text-gray-400 mt-1">
-                          <span>{mat.page_count} стр.</span>
-                          <span>•</span>
-                          <span>{mat.chunks_count} фрагментов</span>
-                          <span>•</span>
-                          <span className="text-emerald-400 flex items-center gap-1">
-                            <CheckCircle2 className="w-3 h-3" /> Вектор готов
-                          </span>
-                        </div>
-                      </div>
+                <div key={mat.id} className="flex flex-col gap-2">
+                  <div 
+                    onClick={() => selectMaterial(mat)}
+                    className={`flex items-center p-3 rounded-lg transition-colors group cursor-pointer border ${
+                      isSelected ? 'bg-surface-container-low border-secondary shadow-sm' : 'bg-surface-container-lowest border-transparent hover:border-surface-container-high'
+                    }`}
+                  >
+                    <div className="w-10 h-10 rounded bg-error-container text-on-error-container flex items-center justify-center mr-4 shrink-0">
+                      <span className="material-symbols-outlined">picture_as_pdf</span>
                     </div>
+                    <div className="flex-1">
+                      <h4 className="font-label-md text-label-md text-on-surface group-hover:text-primary transition-colors line-clamp-1">
+                        {mat.title}
+                      </h4>
+                      <p className="font-label-sm text-label-sm text-on-surface-variant">
+                        {mat.page_count} стр. • {mat.chunks_count} фрагментов
+                      </p>
+                    </div>
+                    {isSelected ? (
+                       <span className="material-symbols-outlined text-secondary">check_circle</span>
+                    ) : (
+                       <button className="text-on-surface-variant hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity">
+                         <span className="material-symbols-outlined">more_vert</span>
+                       </button>
+                    )}
                   </div>
-
+                  
                   {isSelected && (
-                    <div className="mt-4 pt-4 border-t border-white/10 flex items-center justify-between">
-                      <span className="text-xs text-indigo-300 font-medium">Выбран для аттестации</span>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          startInterview(mat.id);
-                        }}
-                        disabled={isStartingInterview}
-                        className="btn-primary flex items-center gap-2 text-xs py-2 px-4"
-                      >
-                        {isStartingInterview ? (
-                          <>
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                            Составление вопросов...
-                          </>
-                        ) : (
-                          <>
-                            <Play className="w-4 h-4 fill-current" />
-                            Начать устное собеседование
-                          </>
-                        )}
-                      </button>
+                    <div className="flex items-center justify-between p-3 bg-secondary-fixed rounded-lg border border-secondary-fixed-dim">
+                       <span className="text-xs text-on-secondary-fixed font-medium">Выбран для аттестации</span>
+                       <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            startInterview(mat.id);
+                          }}
+                          disabled={isStartingInterview}
+                          className="bg-primary text-on-primary rounded-lg py-2 px-4 flex items-center justify-center gap-2 hover:opacity-90 transition-opacity font-label-sm text-label-sm shadow-sm"
+                        >
+                          {isStartingInterview ? (
+                            <span className="material-symbols-outlined animate-spin text-[18px]">refresh</span>
+                          ) : (
+                            <span className="material-symbols-outlined text-[18px]">play_arrow</span>
+                          )}
+                          Начать собеседование
+                       </button>
                     </div>
                   )}
                 </div>
               );
-            })}
-          </div>
-        )}
-      </div>
-    </div>
+            })
+          )}
+        </div>
+      </section>
+    </>
   );
 };

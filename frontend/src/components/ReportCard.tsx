@@ -2,146 +2,140 @@
 
 import React from 'react';
 import { useVerbaStore } from '@/store/useVerbaStore';
-import { Award, BookOpen, CheckCircle2, AlertCircle, Sparkles, ArrowRight, Download, RotateCcw } from 'lucide-react';
 
 export const ReportCard: React.FC = () => {
-  const { finalReport, isLoadingReport, setActiveTab, selectedMaterial, startInterview } = useVerbaStore();
+  const { latestReport, activeSession, setActiveTab } = useVerbaStore();
 
-  if (isLoadingReport) {
+  if (!latestReport || !activeSession) {
     return (
-      <div className="glass-card p-12 text-center text-gray-400 space-y-4">
-        <div className="w-12 h-12 rounded-full border-4 border-indigo-500 border-t-transparent animate-spin mx-auto" />
-        <p className="text-white font-medium">Формирование отчета устного аттестационного собеседования...</p>
+      <div className="flex flex-col items-center justify-center p-12 glass-card rounded-2xl text-center border-outline-variant/30">
+        <span className="material-symbols-outlined text-[48px] text-surface-variant mb-4">analytics</span>
+        <h3 className="font-headline-md text-headline-md text-on-surface">Нет доступного отчета</h3>
+        <p className="font-body-md text-body-md text-on-surface-variant mt-2 max-w-md mx-auto">
+          Пройдите устное собеседование до конца, чтобы система сформировала подробный отчет по вашим знаниям.
+        </p>
+        <button 
+          onClick={() => setActiveTab('dashboard')}
+          className="mt-6 px-6 py-2 bg-secondary text-on-secondary rounded-lg font-label-md transition-opacity hover:opacity-90"
+        >
+          Вернуться на главную
+        </button>
       </div>
     );
   }
-
-  if (!finalReport) {
-    return (
-      <div className="glass-card p-12 text-center text-gray-400">
-        Отчет пока не создан. Пройдите тренировочное собеседование до конца.
-      </div>
-    );
-  }
-
-  const score = finalReport.overall_score;
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8">
-      {/* Header Banner */}
-      <div className="glass-card p-8 rounded-2xl relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-6 border-indigo-500/30">
-        <div className="space-y-2 text-center md:text-left">
-          <span className="text-xs uppercase tracking-wider font-semibold text-indigo-400">
-            Результаты аттестации • {finalReport.material_title}
+    <div className="space-y-6 pb-12 mt-gutter">
+      {/* Report Header */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+        <div>
+          <span className="font-label-sm text-label-sm text-tertiary-container uppercase tracking-wider bg-tertiary-container/10 px-3 py-1 rounded-full border border-tertiary-container/20">
+            Итоговый отчет
           </span>
-          <h2 className="text-2xl font-bold text-white">
-            Итоговый отчёт готовности
+          <h2 className="font-headline-lg text-headline-lg-mobile md:text-headline-lg text-on-surface mt-3">
+            {activeSession.material_title}
           </h2>
-          <p className="text-sm text-gray-400">
-            Анализ ответов составлен на основе содержания загруженных учебных материалов.
+          <p className="font-body-md text-body-md text-on-surface-variant mt-1">
+            Анализ проведен на основе {activeSession.total_questions} вопросов.
           </p>
         </div>
-
-        {/* Score Radial Badge */}
-        <div className="flex items-center gap-4 bg-gray-900/80 p-5 rounded-2xl border border-white/10 shrink-0">
-          <div className="text-center">
-            <div className="text-3xl font-extrabold text-indigo-400">
-              {score}%
-            </div>
-            <div className="text-xs text-gray-400 mt-0.5">Средний балл</div>
-          </div>
-          <div className="h-10 w-[1px] bg-white/10" />
-          <div>
-            <div className="text-sm font-bold text-white">
-              {finalReport.grade_label}
-            </div>
-            <div className="text-xs text-emerald-400 mt-0.5 font-medium flex items-center gap-1">
-              <CheckCircle2 className="w-3.5 h-3.5" /> Завершено
-            </div>
-          </div>
-        </div>
+        <button 
+          onClick={() => setActiveTab('dashboard')}
+          className="px-4 py-2 border border-outline text-on-surface rounded-lg hover:bg-surface-variant transition-colors font-label-md flex items-center gap-2"
+        >
+          <span className="material-symbols-outlined">home</span>
+          На главную
+        </button>
       </div>
 
-      {/* Recommendations & Action Plan */}
-      <div className="glass-card p-6 rounded-2xl space-y-4">
-        <h3 className="text-lg font-bold text-white flex items-center gap-2">
-          <Sparkles className="w-5 h-5 text-amber-400" />
-          Рекомендации по дальнейшей подготовке
-        </h3>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Score Card */}
+        <div className="col-span-1 glass-card p-6 rounded-2xl border-outline-variant/30 flex flex-col items-center justify-center text-center relative overflow-hidden group">
+          <div className="absolute top-0 w-full h-1 bg-gradient-to-r from-primary to-secondary" />
+          
+          <div className="w-24 h-24 rounded-full border-4 flex items-center justify-center mb-4 transition-colors relative
+            ${latestReport.overall_score >= 80 ? 'border-tertiary-container text-tertiary-container' : latestReport.overall_score >= 60 ? 'border-secondary text-secondary' : 'border-error text-error'}"
+            style={{ 
+              borderColor: latestReport.overall_score >= 80 ? 'var(--color-tertiary-container)' : latestReport.overall_score >= 60 ? 'var(--color-secondary)' : 'var(--color-error)',
+              color: latestReport.overall_score >= 80 ? 'var(--color-tertiary-container)' : latestReport.overall_score >= 60 ? 'var(--color-secondary)' : 'var(--color-error)'
+            }}
+          >
+            <span className="font-display-lg text-[32px] font-bold">{latestReport.overall_score}</span>
+          </div>
 
-        <div className="grid grid-cols-1 gap-3">
-          {finalReport.key_recommendations.map((rec, idx) => (
-            <div key={idx} className="flex items-start gap-3 p-3.5 rounded-xl bg-gray-900/60 border border-white/5 text-sm text-gray-300">
-              <div className="w-6 h-6 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center shrink-0 font-bold text-xs">
-                {idx + 1}
-              </div>
-              <span className="leading-relaxed">{rec}</span>
-            </div>
-          ))}
+          <h3 className="font-headline-md text-headline-md text-on-surface mb-1">
+            {latestReport.grade_label}
+          </h3>
+          <p className="font-label-sm text-label-sm text-on-surface-variant">Средний балл</p>
+        </div>
+
+        {/* Recommendations Card */}
+        <div className="col-span-1 md:col-span-2 glass-card p-6 rounded-2xl border-outline-variant/30">
+          <h3 className="font-headline-md text-[20px] text-on-surface flex items-center gap-2 mb-4">
+            <span className="material-symbols-outlined text-secondary">tips_and_updates</span>
+            Рекомендации AI-экзаменатора
+          </h3>
+          <ul className="space-y-3">
+            {latestReport.key_recommendations.map((rec, idx) => (
+              <li key={idx} className="flex items-start gap-3 bg-surface-container-low p-3 rounded-lg border border-surface-container-high">
+                <span className="material-symbols-outlined text-secondary shrink-0 mt-0.5">check_circle</span>
+                <span className="font-body-md text-body-md text-on-surface">{rec}</span>
+              </li>
+            ))}
+          </ul>
         </div>
       </div>
 
       {/* Topics Breakdown */}
-      <div className="glass-card p-6 rounded-2xl space-y-4">
-        <h3 className="text-lg font-bold text-white flex items-center gap-2">
-          <BookOpen className="w-5 h-5 text-indigo-400" />
-          Разбор изученных тем и ссылок на страницы PDF
+      <div className="glass-card p-6 rounded-2xl border-outline-variant/30 mt-6">
+        <h3 className="font-headline-md text-[20px] text-on-surface flex items-center gap-2 mb-6">
+          <span className="material-symbols-outlined text-primary">grading</span>
+          Детальный разбор ответов
         </h3>
 
-        <div className="space-y-3">
-          {finalReport.topics_breakdown.map((item, idx) => (
-            <div key={idx} className="p-4 rounded-xl bg-gray-900/50 border border-white/5 space-y-2">
-              <div className="flex items-center justify-between gap-4">
-                <span className="font-semibold text-white text-sm">{item.topic}</span>
-                <span
-                  className={`text-xs px-2.5 py-0.5 rounded-full font-medium border ${
-                    item.status === 'strong'
-                      ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
-                      : item.status === 'medium'
-                      ? 'bg-amber-500/20 text-amber-300 border-amber-500/30'
-                      : 'bg-rose-500/20 text-rose-300 border-rose-500/30'
-                  }`}
-                >
-                  {item.status === 'strong' ? 'Освоено' : item.status === 'medium' ? 'Требует внимания' : 'Пробел'}
-                </span>
-              </div>
+        <div className="space-y-4">
+          {latestReport.topics_breakdown.map((topic, idx) => {
+            const isStrong = topic.status === 'strong';
+            const isMedium = topic.status === 'medium';
 
-              <p className="text-xs text-gray-400">{item.advice}</p>
-
-              {item.pages && item.pages.length > 0 && (
-                <div className="flex items-center gap-2 text-xs text-indigo-300 pt-1">
-                  <span>Страницы в PDF для повторения:</span>
-                  {item.pages.map((p) => (
-                    <span key={p} className="bg-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded border border-indigo-500/30 font-semibold">
-                      Стр. {p}
+            return (
+              <div 
+                key={idx} 
+                className={`p-4 rounded-xl border-l-4 bg-surface-container-lowest shadow-sm
+                  ${isStrong ? 'border-l-tertiary-fixed-dim' : isMedium ? 'border-l-secondary' : 'border-l-error'}`}
+              >
+                <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                  <div className="flex-1">
+                    <h4 className="font-label-md text-label-md text-on-surface font-semibold mb-2">
+                      {topic.topic}
+                    </h4>
+                    <p className="font-body-md text-body-md text-on-surface-variant mb-3">
+                      {topic.advice}
+                    </p>
+                    {topic.pages && topic.pages.length > 0 && (
+                      <div className="flex items-center gap-2">
+                        <span className="material-symbols-outlined text-[16px] text-on-surface-variant">menu_book</span>
+                        <span className="font-label-sm text-label-sm text-on-surface-variant">
+                          Материалы на страницах: {topic.pages.join(', ')}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="shrink-0">
+                    <span className={`inline-flex items-center px-3 py-1 rounded font-label-sm text-label-sm
+                      ${isStrong ? 'bg-tertiary-container/10 text-tertiary-container' : isMedium ? 'bg-secondary/10 text-secondary' : 'bg-error/10 text-error'}`}
+                    >
+                      {isStrong ? 'Усвоено' : isMedium ? 'Требует внимания' : 'Слабое место'}
                     </span>
-                  ))}
+                  </div>
                 </div>
-              )}
-            </div>
-          ))}
+              </div>
+            );
+          })}
         </div>
       </div>
 
-      {/* Action Footer */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4">
-        <button
-          onClick={() => setActiveTab('dashboard')}
-          className="w-full sm:w-auto px-6 py-3 rounded-xl bg-gray-800 hover:bg-gray-700 text-white font-medium text-sm transition-all"
-        >
-          Вернуться в базу знаний
-        </button>
-
-        {selectedMaterial && (
-          <button
-            onClick={() => startInterview(selectedMaterial.id)}
-            className="w-full sm:w-auto btn-primary flex items-center justify-center gap-2 py-3 px-6 text-sm"
-          >
-            <RotateCcw className="w-4 h-4" />
-            Пройти собеседование повторно
-          </button>
-        )}
-      </div>
     </div>
   );
 };
