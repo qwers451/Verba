@@ -1,0 +1,9 @@
+Dockerfile
+.dockerignore
+venv
+__pycache__
+*.pyc
+.env
+uploads/
+verba.db
+.pytest_cache/
