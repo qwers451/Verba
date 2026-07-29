@@ -4,9 +4,9 @@ import React from 'react';
 import { useVerbaStore } from '@/store/useVerbaStore';
 
 export const ReportCard: React.FC = () => {
-  const { latestReport, activeSession, setActiveTab } = useVerbaStore();
+  const { finalReport, activeSession, setActiveTab } = useVerbaStore();
 
-  if (!latestReport || !activeSession) {
+  if (!finalReport || !activeSession) {
     return (
       <div className="flex flex-col items-center justify-center p-12 glass-card rounded-2xl text-center border-outline-variant/30">
         <span className="material-symbols-outlined text-[48px] text-surface-variant mb-4">analytics</span>
@@ -54,17 +54,17 @@ export const ReportCard: React.FC = () => {
           <div className="absolute top-0 w-full h-1 bg-gradient-to-r from-primary to-secondary" />
           
           <div className="w-24 h-24 rounded-full border-4 flex items-center justify-center mb-4 transition-colors relative
-            ${latestReport.overall_score >= 80 ? 'border-tertiary-container text-tertiary-container' : latestReport.overall_score >= 60 ? 'border-secondary text-secondary' : 'border-error text-error'}"
+            ${finalReport.overall_score >= 80 ? 'border-tertiary-container text-tertiary-container' : finalReport.overall_score >= 60 ? 'border-secondary text-secondary' : 'border-error text-error'}"
             style={{ 
-              borderColor: latestReport.overall_score >= 80 ? 'var(--color-tertiary-container)' : latestReport.overall_score >= 60 ? 'var(--color-secondary)' : 'var(--color-error)',
-              color: latestReport.overall_score >= 80 ? 'var(--color-tertiary-container)' : latestReport.overall_score >= 60 ? 'var(--color-secondary)' : 'var(--color-error)'
+              borderColor: finalReport.overall_score >= 80 ? 'var(--color-tertiary-container)' : finalReport.overall_score >= 60 ? 'var(--color-secondary)' : 'var(--color-error)',
+              color: finalReport.overall_score >= 80 ? 'var(--color-tertiary-container)' : finalReport.overall_score >= 60 ? 'var(--color-secondary)' : 'var(--color-error)'
             }}
           >
-            <span className="font-display-lg text-[32px] font-bold">{latestReport.overall_score}</span>
+            <span className="font-display-lg text-[32px] font-bold">{finalReport.overall_score}</span>
           </div>
 
           <h3 className="font-headline-md text-headline-md text-on-surface mb-1">
-            {latestReport.grade_label}
+            {finalReport.grade_label}
           </h3>
           <p className="font-label-sm text-label-sm text-on-surface-variant">Средний балл</p>
         </div>
@@ -76,7 +76,7 @@ export const ReportCard: React.FC = () => {
             Рекомендации AI-экзаменатора
           </h3>
           <ul className="space-y-3">
-            {latestReport.key_recommendations.map((rec, idx) => (
+            {finalReport.key_recommendations.map((rec, idx) => (
               <li key={idx} className="flex items-start gap-3 bg-surface-container-low p-3 rounded-lg border border-surface-container-high">
                 <span className="material-symbols-outlined text-secondary shrink-0 mt-0.5">check_circle</span>
                 <span className="font-body-md text-body-md text-on-surface">{rec}</span>
@@ -94,7 +94,7 @@ export const ReportCard: React.FC = () => {
         </h3>
 
         <div className="space-y-4">
-          {latestReport.topics_breakdown.map((topic, idx) => {
+          {finalReport.topics_breakdown.map((topic, idx) => {
             const isStrong = topic.status === 'strong';
             const isMedium = topic.status === 'medium';
 
