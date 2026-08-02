@@ -56,6 +56,23 @@ export const api = {
     return res.data;
   },
 
+  deleteMaterial: async (materialId: string) => {
+    const res = await apiClient.delete(`/materials/${materialId}`);
+    return res.data;
+  },
+
+    getMaterialPdfBlob: async (materialId: string): Promise<Blob> => {
+    const res = await apiClient.get(`/materials/${materialId}/pdf`, {
+      responseType: 'blob'
+    });
+    return res.data;
+  },
+
+  getMaterialChunks: async (materialId: string): Promise<any[]> => {
+    const res = await apiClient.get(`/materials/${materialId}/chunks`);
+    return res.data;
+  },
+
   startInterview: async (materialId: string, totalQuestions: number = 5): Promise<InterviewSession> => {
     const res = await apiClient.post('/interviews/start', {
       material_id: materialId,

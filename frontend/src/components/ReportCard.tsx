@@ -2,9 +2,11 @@
 
 import React from 'react';
 import { useVerbaStore } from '@/store/useVerbaStore';
+import { useRouter } from 'next/navigation';
 
 export const ReportCard: React.FC = () => {
-  const { finalReport, activeSession, setActiveTab } = useVerbaStore();
+  const { finalReport, activeSession } = useVerbaStore();
+  const router = useRouter();
 
   if (!finalReport || !activeSession) {
     return (
@@ -15,7 +17,7 @@ export const ReportCard: React.FC = () => {
           Пройдите устное собеседование до конца, чтобы система сформировала подробный отчет по вашим знаниям.
         </p>
         <button 
-          onClick={() => setActiveTab('dashboard')}
+          onClick={() => router.push('/dashboard')}
           className="mt-6 px-6 py-2 bg-secondary text-on-secondary rounded-lg font-label-md transition-opacity hover:opacity-90"
         >
           Вернуться на главную

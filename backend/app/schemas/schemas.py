@@ -37,6 +37,17 @@ class MaterialResponse(BaseModel):
     class Config:
         from_attributes = True
 
+class DocumentChunkResponse(BaseModel):
+    id: str
+    material_id: str
+    page_number: int
+    chunk_index: int
+    content: str
+    keywords: List[str]
+
+    class Config:
+        from_attributes = True
+
 # Interview Dialog Schemas
 class DialogItem(BaseModel):
     id: str

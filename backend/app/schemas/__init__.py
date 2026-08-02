@@ -10,7 +10,8 @@ from app.schemas.schemas import (
     AnswerEvaluationResponse,
     FinalReportResponse,
     DialogItem,
-    RecommendationTopic
+    RecommendationTopic,
+    DocumentChunkResponse
 )
 
 __all__ = [
@@ -25,5 +26,6 @@ __all__ = [
     "AnswerEvaluationResponse",
     "FinalReportResponse",
     "DialogItem",
-    "RecommendationTopic"
+    "RecommendationTopic",
+    "DocumentChunkResponse"
 ]

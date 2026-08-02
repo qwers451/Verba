@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useVerbaStore } from '@/store/useVerbaStore';
+import { useRouter } from 'next/navigation';
 
 export const InterviewSimulator: React.FC = () => {
   const {
@@ -10,8 +11,8 @@ export const InterviewSimulator: React.FC = () => {
     submitAnswer,
     isEvaluating,
     setVoiceModeActive,
-    setActiveTab,
   } = useVerbaStore();
+  const router = useRouter();
 
   const [answerInput, setAnswerInput] = useState('');
   const [isListening, setIsListening] = useState(false);
@@ -63,7 +64,10 @@ export const InterviewSimulator: React.FC = () => {
     if (!answerInput.trim() || isEvaluating) return;
     const currentText = answerInput;
     setAnswerInput('');
-    await submitAnswer(currentText);
+    const isFinished = await submitAnswer(currentText);
+    if (isFinished) {
+      router.push('/report');
+    }
   };
 
   if (!activeSession) {

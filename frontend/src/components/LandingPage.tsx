@@ -2,21 +2,23 @@
 
 import React from 'react';
 import { useVerbaStore } from '@/store/useVerbaStore';
+import { useRouter } from 'next/navigation';
 
 export const LandingPage: React.FC = () => {
-  const { setActiveTab, token, setAuthModalOpen } = useVerbaStore();
+  const { token, setAuthModalOpen } = useVerbaStore();
+  const router = useRouter();
 
   const handleStartClick = (e: React.MouseEvent) => {
     e.preventDefault();
     if (token) {
-      setActiveTab('dashboard');
+      router.push('/dashboard');
     } else {
       setAuthModalOpen(true);
     }
   };
 
   return (
-    <div className="bg-background text-on-background font-body-md text-body-md antialiased selection:bg-primary-container selection:text-on-primary-container">
+    <div className="bg-background text-on-background font-body-md text-body-md antialiased selection:bg-primary-container selection:text-on-primary-container w-full overflow-x-hidden min-h-screen relative">
       <header className="sticky top-0 z-50 bg-surface shadow-[0px_4px_20px_rgba(0,0,0,0.05)] w-full">
         <nav className="flex justify-between items-center w-full px-4 md:px-10 max-w-7xl mx-auto h-20">
           <div className="flex items-center gap-6">

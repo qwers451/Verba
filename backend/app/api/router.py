@@ -2,6 +2,7 @@ import os
 import shutil
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status
+from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
@@ -16,11 +17,13 @@ from app.schemas import (
     SubmitAnswerRequest,
     AnswerEvaluationResponse,
     FinalReportResponse,
-    DialogItem
+    DialogItem,
+    DocumentChunkResponse
 )
 from app.services.pdf_service import PDFProcessingService
 from app.services.rag_service import RAGService
 from app.services.llm_service import LLMService
+from langchain_core.documents import Document
 
 router = APIRouter()
 
@@ -88,20 +91,37 @@ async def upload_material(
 
     # Save document chunks with vector embeddings
     db_chunks = []
+    langchain_docs = []
+    
     for chunk in chunks:
-        vec = RAGService.generate_simple_embedding(chunk["content"])
+        # We don't generate dummy embeddings anymore, save directly to sqlite
         db_chunk = DocumentChunk(
             material_id=material.id,
             content=chunk["content"],
             page_number=chunk["page_number"],
             chunk_index=chunk["chunk_index"],
             keywords=chunk["keywords"],
-            embedding_json={"vector": vec}
+            embedding_json={}
         )
         db_chunks.append(db_chunk)
+        
+        # Prepare for ChromaDB
+        langchain_docs.append(Document(
+            page_content=chunk["content"],
+            metadata={
+                "material_id": material.id,
+                "page_number": chunk["page_number"],
+                "chunk_index": chunk["chunk_index"]
+            }
+        ))
 
     db.add_all(db_chunks)
     await db.commit()
+    
+    # Save to ChromaDB
+    if langchain_docs:
+        vs = RAGService.get_vector_store()
+        vs.add_documents(langchain_docs)
 
     return material
 
@@ -114,6 +134,73 @@ async def list_materials(
         select(Material).where(Material.user_id == user.id).order_by(Material.created_at.desc())
     )
     return result.scalars().all()
+
+@router.get("/materials/{material_id}/pdf")
+async def get_material_pdf(
+    material_id: str,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    material = await db.get(Material, material_id)
+    if not material or material.user_id != user.id:
+        raise HTTPException(status_code=404, detail="Материал не найден.")
+    
+    if not os.path.exists(material.file_path):
+        raise HTTPException(status_code=404, detail="PDF файл не найден на сервере.")
+        
+    return FileResponse(
+        path=material.file_path,
+        media_type="application/pdf",
+        filename=os.path.basename(material.file_path)
+    )
+
+@router.get("/materials/{material_id}/chunks", response_model=List[DocumentChunkResponse])
+async def get_material_chunks(
+    material_id: str,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    material = await db.get(Material, material_id)
+    if not material or material.user_id != user.id:
+        raise HTTPException(status_code=404, detail="Материал не найден.")
+    
+    result = await db.execute(
+        select(DocumentChunk)
+        .where(DocumentChunk.material_id == material_id)
+        .order_by(DocumentChunk.chunk_index)
+    )
+    return result.scalars().all()
+
+@router.delete("/materials/{material_id}")
+async def delete_material(
+    material_id: str,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    material = await db.get(Material, material_id)
+    if not material or material.user_id != user.id:
+        raise HTTPException(status_code=404, detail="Материал не найден.")
+        
+    # Delete file from disk if it exists
+    if os.path.exists(material.file_path):
+        os.remove(material.file_path)
+        
+    # Delete from ChromaDB
+    try:
+        vs = RAGService.get_vector_store()
+        # ChromaDB allows deleting by metadata filter in some versions, or we can just fetch and delete by ids.
+        # Let's try to get them first.
+        docs = vs.get(where={"material_id": material.id})
+        if docs and docs["ids"]:
+            vs.delete(ids=docs["ids"])
+    except Exception as e:
+        print(f"Warning: Failed to delete vectors from ChromaDB: {e}")
+
+    # Delete from DB (cascade should handle document_chunks and interviews)
+    await db.delete(material)
+    await db.commit()
+    
+    return {"status": "success", "message": "Материал успешно удален."}
 
 @router.post("/interviews/start", response_model=InterviewSessionResponse)
 async def start_interview(

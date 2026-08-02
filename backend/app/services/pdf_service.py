@@ -1,8 +1,8 @@
 import os
 import re
 from typing import List, Dict, Any
-import pypdf
-
+import pymupdf4llm
+from langchain_text_splitters import MarkdownTextSplitter
 class PDFProcessingService:
     """
     Parses PDF documents, tracks page numbers, splits into contextual chunks,
@@ -12,64 +12,59 @@ class PDFProcessingService:
     @staticmethod
     def extract_text_by_pages(file_path: str) -> List[Dict[str, Any]]:
         """
-        Extracts text from PDF, returning a list of dicts with page_number and text.
+        Extracts text from PDF using pymupdf4llm to preserve markdown formatting (tables, headers).
         """
-        pages_data = []
         if not os.path.exists(file_path):
             raise FileNotFoundError(f"Файл {file_path} не найден.")
 
-        reader = pypdf.PdfReader(file_path)
-        total_pages = len(reader.pages)
-
-        for idx, page in enumerate(reader.pages):
-            text = page.extract_text() or ""
-            # Clean up whitespace
-            text = re.sub(r'\s+', ' ', text).strip()
-            if text:
-                pages_data.append({
-                    "page_number": idx + 1,
-                    "content": text
-                })
+        pages_data = []
+        try:
+            md_pages = pymupdf4llm.to_markdown(file_path, page_chunks=True)
+            for page in md_pages:
+                text = page.get("text", "")
+                page_num = page.get("metadata", {}).get("page", 0) + 1
+                if text.strip():
+                    pages_data.append({
+                        "page_number": page_num,
+                        "content": text.strip()
+                    })
+        except Exception as e:
+            raise RuntimeError(f"Ошибка при парсинге PDF: {str(e)}")
 
         return pages_data
 
     @staticmethod
-    def create_chunks(pages_data: List[Dict[str, Any]], chunk_size: int = 500, overlap: int = 100) -> List[Dict[str, Any]]:
+    def create_chunks(pages_data: List[Dict[str, Any]], max_chars: int = 1500, overlap_chars: int = 300) -> List[Dict[str, Any]]:
         """
-        Splits page content into overlapping chunks with page metadata.
+        Splits page content into chunks with page metadata, using MarkdownTextSplitter to preserve tables.
         """
+        splitter = MarkdownTextSplitter(chunk_size=max_chars, chunk_overlap=overlap_chars)
+        
         chunks = []
         global_chunk_idx = 0
 
         for page in pages_data:
             page_num = page["page_number"]
             text = page["content"]
-
-            words = text.split(' ')
-            if len(words) <= chunk_size:
-                # Small enough to fit in one chunk
-                keywords = PDFProcessingService._extract_keywords(text)
+            
+            if not text.strip():
+                continue
+                
+            split_texts = splitter.split_text(text)
+            
+            for chunk_text in split_texts:
+                chunk_text = chunk_text.strip()
+                if not chunk_text:
+                    continue
+                    
+                keywords = PDFProcessingService._extract_keywords(chunk_text)
                 chunks.append({
                     "chunk_index": global_chunk_idx,
                     "page_number": page_num,
-                    "content": text,
+                    "content": chunk_text,
                     "keywords": keywords
                 })
                 global_chunk_idx += 1
-            else:
-                start = 0
-                while start < len(words):
-                    end = start + chunk_size
-                    chunk_text = " ".join(words[start:end])
-                    keywords = PDFProcessingService._extract_keywords(chunk_text)
-                    chunks.append({
-                        "chunk_index": global_chunk_idx,
-                        "page_number": page_num,
-                        "content": chunk_text,
-                        "keywords": keywords
-                    })
-                    global_chunk_idx += 1
-                    start += (chunk_size - overlap)
 
         return chunks
 

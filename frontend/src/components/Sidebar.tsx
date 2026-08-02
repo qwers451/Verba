@@ -2,12 +2,17 @@
 
 import React from 'react';
 import { useVerbaStore } from '@/store/useVerbaStore';
+import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
 
 export default function Sidebar() {
-  const { activeTab, setActiveTab, logout } = useVerbaStore();
+  const { logout } = useVerbaStore();
+  const pathname = usePathname();
+  const router = useRouter();
 
   const handleLogout = () => {
     logout();
+    router.push('/');
   };
 
   return (
@@ -25,45 +30,52 @@ export default function Sidebar() {
 
       {/* Navigation Links */}
       <div className="flex-1 flex flex-col gap-1.5 px-2 mt-4">
-        <button 
-          onClick={() => setActiveTab('dashboard')}
-          className={`flex items-center gap-3 px-4 py-3 rounded-xl group transition-all duration-200 ${activeTab === 'dashboard' ? 'bg-primary-container text-on-primary-container font-semibold' : 'text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface'}`}
+        <Link 
+          href="/dashboard"
+          className={`flex items-center gap-3 px-4 py-3 rounded-xl group transition-all duration-200 ${pathname === '/dashboard' ? 'bg-primary-container text-on-primary-container font-semibold' : 'text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface'}`}
         >
-          <span className="material-symbols-outlined" style={{ fontVariationSettings: activeTab === 'dashboard' ? "'FILL' 1" : "'FILL' 0" }}>home</span>
+          <span className="material-symbols-outlined" style={{ fontVariationSettings: pathname === '/dashboard' ? "'FILL' 1" : "'FILL' 0" }}>home</span>
           Главная
-        </button>
-        <button 
-          onClick={() => setActiveTab('exams')}
-          className={`flex items-center gap-3 px-4 py-3 rounded-xl group transition-all duration-200 ${activeTab === 'exams' ? 'bg-primary-container text-on-primary-container font-semibold' : 'text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface'}`}
+        </Link>
+        <Link 
+          href="/materials"
+          className={`flex items-center gap-3 px-4 py-3 rounded-xl group transition-all duration-200 ${pathname === '/materials' ? 'bg-primary-container text-on-primary-container font-semibold' : 'text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface'}`}
         >
-          <span className="material-symbols-outlined" style={{ fontVariationSettings: activeTab === 'exams' ? "'FILL' 1" : "'FILL' 0" }}>record_voice_over</span>
+          <span className="material-symbols-outlined" style={{ fontVariationSettings: pathname === '/materials' ? "'FILL' 1" : "'FILL' 0" }}>library_books</span>
+          Мои материалы
+        </Link>
+        <Link 
+          href="/exams"
+          className={`flex items-center gap-3 px-4 py-3 rounded-xl group transition-all duration-200 ${pathname === '/exams' ? 'bg-primary-container text-on-primary-container font-semibold' : 'text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface'}`}
+        >
+          <span className="material-symbols-outlined" style={{ fontVariationSettings: pathname === '/exams' ? "'FILL' 1" : "'FILL' 0" }}>record_voice_over</span>
           Мои экзамены
-        </button>
-        <button 
-          onClick={() => setActiveTab('coach')}
-          className={`flex items-center gap-3 px-4 py-3 rounded-xl group transition-all duration-200 ${activeTab === 'coach' ? 'bg-primary-container text-on-primary-container font-semibold' : 'text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface'}`}
+        </Link>
+        <Link 
+          href="/coach"
+          className={`flex items-center gap-3 px-4 py-3 rounded-xl group transition-all duration-200 ${pathname === '/coach' ? 'bg-primary-container text-on-primary-container font-semibold' : 'text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface'}`}
         >
-          <span className="material-symbols-outlined" style={{ fontVariationSettings: activeTab === 'coach' ? "'FILL' 1" : "'FILL' 0" }}>psychology</span>
+          <span className="material-symbols-outlined" style={{ fontVariationSettings: pathname === '/coach' ? "'FILL' 1" : "'FILL' 0" }}>psychology</span>
           AI Тренер
-        </button>
-        <button 
-          onClick={() => setActiveTab('settings')}
-          className={`flex items-center gap-3 px-4 py-3 rounded-xl group transition-all duration-200 ${activeTab === 'settings' ? 'bg-primary-container text-on-primary-container font-semibold' : 'text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface'}`}
+        </Link>
+        <Link 
+          href="/settings"
+          className={`flex items-center gap-3 px-4 py-3 rounded-xl group transition-all duration-200 ${pathname === '/settings' ? 'bg-primary-container text-on-primary-container font-semibold' : 'text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface'}`}
         >
-          <span className="material-symbols-outlined" style={{ fontVariationSettings: activeTab === 'settings' ? "'FILL' 1" : "'FILL' 0" }}>settings</span>
+          <span className="material-symbols-outlined" style={{ fontVariationSettings: pathname === '/settings' ? "'FILL' 1" : "'FILL' 0" }}>settings</span>
           Настройки
-        </button>
+        </Link>
       </div>
 
       {/* Footer Tab */}
       <div className="px-2 mt-auto pb-4 flex flex-col gap-1.5">
-        <button 
-          onClick={() => setActiveTab('help')}
-          className={`flex items-center gap-3 px-4 py-3 rounded-xl group transition-all duration-200 ${activeTab === 'help' ? 'bg-primary-container text-on-primary-container font-semibold' : 'text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface'}`}
+        <Link 
+          href="/help"
+          className={`flex items-center gap-3 px-4 py-3 rounded-xl group transition-all duration-200 ${pathname === '/help' ? 'bg-primary-container text-on-primary-container font-semibold' : 'text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface'}`}
         >
-          <span className="material-symbols-outlined" style={{ fontVariationSettings: activeTab === 'help' ? "'FILL' 1" : "'FILL' 0" }}>help</span>
+          <span className="material-symbols-outlined" style={{ fontVariationSettings: pathname === '/help' ? "'FILL' 1" : "'FILL' 0" }}>help</span>
           Помощь
-        </button>
+        </Link>
         <button 
           onClick={handleLogout}
           className="flex items-center gap-3 px-4 py-3 text-error hover:bg-error-container hover:text-on-error-container rounded-xl transition-all group"

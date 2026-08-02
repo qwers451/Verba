@@ -3,10 +3,6 @@ import { UserProfile, Material, InterviewSession, AnswerEvaluation, FinalReport 
 import { api } from '@/lib/api';
 
 interface VerbaState {
-  // Navigation View
-  activeTab: 'landing' | 'dashboard' | 'interview' | 'report' | 'exams' | 'coach' | 'settings' | 'help';
-  setActiveTab: (tab: 'landing' | 'dashboard' | 'interview' | 'report' | 'exams' | 'coach' | 'settings' | 'help') => void;
-
   // Auth
   isAuthModalOpen: boolean;
   setAuthModalOpen: (open: boolean) => void;
@@ -28,6 +24,7 @@ interface VerbaState {
   uploadError: string | null;
   fetchMaterials: () => Promise<void>;
   uploadPdf: (file: File) => Promise<void>;
+  deleteMaterial: (materialId: string) => Promise<void>;
   selectMaterial: (material: Material) => void;
 
   // Active Interview Session
@@ -50,9 +47,6 @@ interface VerbaState {
 }
 
 export const useVerbaStore = create<VerbaState>((set, get) => ({
-  activeTab: 'landing',
-  setActiveTab: (tab) => set({ activeTab: tab }),
-
   isAuthModalOpen: false,
   setAuthModalOpen: (open) => set({ isAuthModalOpen: open }),
   token: null,
@@ -60,7 +54,7 @@ export const useVerbaStore = create<VerbaState>((set, get) => ({
     try {
       const res = await api.login(email, password);
       localStorage.setItem('verba_token', res.access_token);
-      set({ token: res.access_token, isAuthModalOpen: false, activeTab: 'dashboard' });
+      set({ token: res.access_token, isAuthModalOpen: false });
       await get().fetchUser();
       await get().fetchMaterials();
     } catch (err: any) {
@@ -72,7 +66,7 @@ export const useVerbaStore = create<VerbaState>((set, get) => ({
       await api.register(email, password, name);
       const res = await api.login(email, password);
       localStorage.setItem('verba_token', res.access_token);
-      set({ token: res.access_token, isAuthModalOpen: false, activeTab: 'dashboard' });
+      set({ token: res.access_token, isAuthModalOpen: false });
       await get().fetchUser();
       await get().fetchMaterials();
     } catch (err: any) {
@@ -81,10 +75,11 @@ export const useVerbaStore = create<VerbaState>((set, get) => ({
   },
   logout: () => {
     localStorage.removeItem('verba_token');
-    set({ token: null, user: null, materials: [], activeSession: null, activeTab: 'landing' });
+    set({ token: null, user: null, materials: [], activeSession: null });
   },
   hydrateAuth: () => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('verba_token') : null;
+    
     if (token) {
       set({ token });
       get().fetchUser().catch(() => get().logout());
@@ -140,6 +135,19 @@ export const useVerbaStore = create<VerbaState>((set, get) => ({
 
   selectMaterial: (material: Material) => set({ selectedMaterial: material }),
 
+  deleteMaterial: async (materialId: string) => {
+    try {
+      await api.deleteMaterial(materialId);
+      set((state) => ({
+        materials: state.materials.filter((m) => m.id !== materialId),
+        selectedMaterial: state.selectedMaterial?.id === materialId ? null : state.selectedMaterial
+      }));
+    } catch (err: any) {
+      console.error('Error deleting material:', err);
+      alert(err.response?.data?.detail || 'Ошибка при удалении материала.');
+    }
+  },
+
   activeSession: null,
   isStartingInterview: false,
   currentQuestionIdx: 0,
@@ -152,13 +160,14 @@ export const useVerbaStore = create<VerbaState>((set, get) => ({
       const session = await api.startInterview(materialId, 5);
       set({
         activeSession: session,
-        activeTab: 'interview',
         isStartingInterview: false,
       });
       get().fetchUser(); // Refresh quota count
+      return session.id;
     } catch (err: any) {
       alert(err.response?.data?.detail || 'Не удалось начать сессию собеседования.');
       set({ isStartingInterview: false });
+      return null;
     }
   },
 
@@ -203,12 +212,15 @@ export const useVerbaStore = create<VerbaState>((set, get) => ({
       });
 
       if (evaluation.is_last_question) {
-        // Fetch report & open report tab
+        // Fetch report
         await get().fetchReport(activeSession.id);
+        return true; // indicates it's finished
       }
+      return false;
     } catch (err: any) {
       console.error('Error submitting answer:', err);
       set({ isEvaluating: false });
+      return false;
     }
   },
 
@@ -221,7 +233,6 @@ export const useVerbaStore = create<VerbaState>((set, get) => ({
       set({
         finalReport: report,
         isLoadingReport: false,
-        activeTab: 'report',
       });
     } catch (err) {
       console.error('Error fetching report:', err);
