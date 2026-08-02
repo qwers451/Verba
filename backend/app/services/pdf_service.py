@@ -1,8 +1,9 @@
 import os
 import re
 from typing import List, Dict, Any
-import pymupdf4llm
 from langchain_text_splitters import MarkdownTextSplitter
+from app.config import settings
+from llama_parse import LlamaParse
 class PDFProcessingService:
     """
     Parses PDF documents, tracks page numbers, splits into contextual chunks,
@@ -12,24 +13,38 @@ class PDFProcessingService:
     @staticmethod
     def extract_text_by_pages(file_path: str) -> List[Dict[str, Any]]:
         """
-        Extracts text from PDF using pymupdf4llm to preserve markdown formatting (tables, headers).
+        Extracts text from PDF using LlamaParse to preserve markdown formatting (tables, headers)
+        and to accurately parse mathematical formulas into LaTeX format.
         """
         if not os.path.exists(file_path):
             raise FileNotFoundError(f"Файл {file_path} не найден.")
 
+        api_key = settings.LLAMA_CLOUD_API_KEY
+        if not api_key:
+            raise RuntimeError("API ключ LlamaParse не настроен (LLAMA_CLOUD_API_KEY). Пожалуйста, добавьте его в .env файл для извлечения формул.")
+
         pages_data = []
         try:
-            md_pages = pymupdf4llm.to_markdown(file_path, page_chunks=True)
-            for page in md_pages:
-                text = page.get("text", "")
-                page_num = page.get("metadata", {}).get("page", 0) + 1
+            parser = LlamaParse(
+                api_key=api_key,
+                result_type="markdown",
+                verbose=True
+            )
+            # LlamaParse doesn't strictly return page by page by default unless configured,
+            # but it returns a list of Documents where we can assign index or check metadata.
+            # Using load_data directly
+            docs = parser.load_data(file_path)
+            
+            for i, page in enumerate(docs):
+                text = page.text
+                page_num = page.metadata.get("page", i) + 1
                 if text.strip():
                     pages_data.append({
                         "page_number": page_num,
                         "content": text.strip()
                     })
         except Exception as e:
-            raise RuntimeError(f"Ошибка при парсинге PDF: {str(e)}")
+            raise RuntimeError(f"Ошибка при парсинге PDF (LlamaParse): {str(e)}")
 
         return pages_data
 

@@ -3,8 +3,9 @@ from typing import List, Tuple
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models import DocumentChunk
-from langchain_community.vectorstores import Chroma
+from langchain_chroma import Chroma
 from langchain_community.embeddings.fastembed import FastEmbedEmbeddings
+import chromadb
 
 class RAGService:
     """
@@ -20,12 +21,14 @@ class RAGService:
             if cls._embeddings is None:
                 cls._embeddings = FastEmbedEmbeddings(model_name="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
             
-            # Persistent ChromaDB store
+            # Persistent ChromaDB store with cosine similarity for correct 0-1 scores
             persist_dir = os.path.join(os.getcwd(), "chroma_db")
+            client = chromadb.PersistentClient(path=persist_dir)
             cls._vector_store = Chroma(
+                client=client,
                 collection_name="verba_materials",
                 embedding_function=cls._embeddings,
-                persist_directory=persist_dir
+                collection_metadata={"hnsw:space": "cosine"}
             )
         return cls._vector_store
 
