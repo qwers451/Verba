@@ -3,7 +3,7 @@
 import React from 'react';
 import { useVerbaStore } from '@/store/useVerbaStore';
 import { MaterialUploader } from '@/components/MaterialUploader';
-import { api } from '@/lib/api';
+import { api, getApiErrorMessage } from '@/lib/api';
 import { ChunksViewerModal } from '@/components/ChunksViewerModal';
 import { useRouter } from 'next/navigation';
 
@@ -25,9 +25,9 @@ export function MaterialsTab() {
       const url = window.URL.createObjectURL(blob);
       window.open(url, '_blank');
       setTimeout(() => window.URL.revokeObjectURL(url), 10000);
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error('Error viewing PDF', e);
-      alert('Не удалось открыть PDF файл. ' + (e.response?.data?.detail || ''));
+      alert('Не удалось открыть PDF файл. ' + getApiErrorMessage(e, ''));
     }
   };
 

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { UserProfile, Material, InterviewSession, AnswerEvaluation, FinalReport } from '@/types';
-import { api } from '@/lib/api';
+import { api, getApiErrorMessage } from '@/lib/api';
 
 interface VerbaState {
   // Auth
@@ -33,8 +33,8 @@ interface VerbaState {
   currentQuestionIdx: number;
   latestEvaluation: AnswerEvaluation | null;
   isEvaluating: boolean;
-  startInterview: (materialId: string) => Promise<void>;
-  submitAnswer: (answer: string) => Promise<void>;
+  startInterview: (materialId: string) => Promise<string | null>;
+  submitAnswer: (answer: string) => Promise<boolean>;
   
   // Report
   finalReport: FinalReport | null;
@@ -57,8 +57,8 @@ export const useVerbaStore = create<VerbaState>((set, get) => ({
       set({ token: res.access_token, isAuthModalOpen: false });
       await get().fetchUser();
       await get().fetchMaterials();
-    } catch (err: any) {
-      throw new Error(err.response?.data?.detail || 'Ошибка авторизации');
+    } catch (err: unknown) {
+      throw new Error(getApiErrorMessage(err, 'Ошибка авторизации'));
     }
   },
   register: async (email, password, name) => {
@@ -69,8 +69,8 @@ export const useVerbaStore = create<VerbaState>((set, get) => ({
       set({ token: res.access_token, isAuthModalOpen: false });
       await get().fetchUser();
       await get().fetchMaterials();
-    } catch (err: any) {
-      throw new Error(err.response?.data?.detail || 'Ошибка регистрации');
+    } catch (err: unknown) {
+      throw new Error(getApiErrorMessage(err, 'Ошибка регистрации'));
     }
   },
   logout: () => {
@@ -127,8 +127,8 @@ export const useVerbaStore = create<VerbaState>((set, get) => ({
         selectedMaterial: newMat,
         isUploading: false,
       });
-    } catch (err: any) {
-      const errMsg = err.response?.data?.detail || 'Ошибка при загрузке PDF-файла.';
+    } catch (err: unknown) {
+      const errMsg = getApiErrorMessage(err, 'Ошибка при загрузке PDF-файла.');
       set({ uploadError: errMsg, isUploading: false });
     }
   },
@@ -142,9 +142,9 @@ export const useVerbaStore = create<VerbaState>((set, get) => ({
         materials: state.materials.filter((m) => m.id !== materialId),
         selectedMaterial: state.selectedMaterial?.id === materialId ? null : state.selectedMaterial
       }));
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error deleting material:', err);
-      alert(err.response?.data?.detail || 'Ошибка при удалении материала.');
+      alert(getApiErrorMessage(err, 'Ошибка при удалении материала.'));
     }
   },
 
@@ -164,8 +164,8 @@ export const useVerbaStore = create<VerbaState>((set, get) => ({
       });
       get().fetchUser(); // Refresh quota count
       return session.id;
-    } catch (err: any) {
-      alert(err.response?.data?.detail || 'Не удалось начать сессию собеседования.');
+    } catch (err: unknown) {
+      alert(getApiErrorMessage(err, 'Не удалось начать сессию собеседования.'));
       set({ isStartingInterview: false });
       return null;
     }
@@ -173,10 +173,10 @@ export const useVerbaStore = create<VerbaState>((set, get) => ({
 
   submitAnswer: async (answer: string) => {
     const { activeSession, currentQuestionIdx } = get();
-    if (!activeSession) return;
+    if (!activeSession) return false;
 
     const currentDialog = activeSession.dialogs[currentQuestionIdx];
-    if (!currentDialog) return;
+    if (!currentDialog) return false;
 
     set({ isEvaluating: true });
     try {
@@ -217,7 +217,7 @@ export const useVerbaStore = create<VerbaState>((set, get) => ({
         return true; // indicates it's finished
       }
       return false;
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error submitting answer:', err);
       set({ isEvaluating: false });
       return false;

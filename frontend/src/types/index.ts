@@ -18,6 +18,14 @@ export interface Material {
   created_at: string;
 }
 
+export interface DocumentChunk {
+  id: string;
+  content: string;
+  page_number: number;
+  chunk_index: number;
+  keywords: string[];
+}
+
 export interface DialogItem {
   id: string;
   question_number: number;

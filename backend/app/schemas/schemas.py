@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, EmailStr
+from pydantic import BaseModel, ConfigDict, Field, EmailStr
 from typing import List, Optional, Any
 from datetime import datetime
 
@@ -17,8 +17,7 @@ class UserProfileResponse(UserBase):
     sessions_used_this_month: int
     sessions_remaining: int
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class Token(BaseModel):
     access_token: str
@@ -34,8 +33,7 @@ class MaterialResponse(BaseModel):
     file_size_bytes: int
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class DocumentChunkResponse(BaseModel):
     id: str
@@ -45,8 +43,7 @@ class DocumentChunkResponse(BaseModel):
     content: str
     keywords: List[str]
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 # Interview Dialog Schemas
 class DialogItem(BaseModel):
@@ -59,8 +56,7 @@ class DialogItem(BaseModel):
     missed_concepts: Optional[List[str]] = None
     referenced_pages: Optional[List[int]] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 # Interview Session Schemas
 class InterviewStartRequest(BaseModel):
@@ -75,11 +71,10 @@ class InterviewSessionResponse(BaseModel):
     current_question_index: int
     total_questions: int
     overall_score: Optional[float] = None
-    dialogs: List[DialogItem] = []
+    dialogs: List[DialogItem] = Field(default_factory=list)
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class SubmitAnswerRequest(BaseModel):
     session_id: str

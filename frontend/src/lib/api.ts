@@ -1,5 +1,12 @@
 import axios from 'axios';
-import { UserProfile, Material, InterviewSession, AnswerEvaluation, FinalReport } from '@/types';
+import { UserProfile, Material, InterviewSession, AnswerEvaluation, FinalReport, DocumentChunk } from '@/types';
+
+export const getApiErrorMessage = (error: unknown, fallback: string): string => {
+  if (axios.isAxiosError<{ detail?: string }>(error)) {
+    return error.response?.data?.detail || error.message || fallback;
+  }
+  return error instanceof Error ? error.message : fallback;
+};
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000') + '/api/v1';
 
@@ -68,7 +75,7 @@ export const api = {
     return res.data;
   },
 
-  getMaterialChunks: async (materialId: string): Promise<any[]> => {
+  getMaterialChunks: async (materialId: string): Promise<DocumentChunk[]> => {
     const res = await apiClient.get(`/materials/${materialId}/chunks`);
     return res.data;
   },

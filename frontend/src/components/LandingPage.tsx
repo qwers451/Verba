@@ -3,6 +3,7 @@
 import React from 'react';
 import { useVerbaStore } from '@/store/useVerbaStore';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 
 export const LandingPage: React.FC = () => {
   const { token, setAuthModalOpen } = useVerbaStore();
@@ -77,14 +78,20 @@ export const LandingPage: React.FC = () => {
           </div>
           <div className="flex-1 relative w-full aspect-square md:aspect-auto md:h-[600px] rounded-xl overflow-hidden shadow-[0px_12px_40px_rgba(0,0,0,0.08)] border border-white/50 bg-white group">
             <div className="absolute inset-0 bg-gradient-to-tr from-surface-container-lowest to-surface-container-high opacity-50"></div>
-            <img className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt="AI illustration" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAnIEB5aZUPjaLL38WZYo1McBtakCWbD77r2BYALG8e166PaENxpdCpPKBixLeCJ6gY-EkNCgcJS-nGC-hfDKmFr4zxEhRM8sklwXeQNt8Bvnqbs4EkFr7oKF8OHQPnDVMU_WpI3kvjlegfJgLcaO1d-bLYm8NXAJZWR7y_gaHbQ0DlolXNQKhnI8L-JeY9DFZ2ud9DOfsS2neYEsRYdSpllDCmRh7J8KG4BoKoMoiVAe2mDiS9g3cjmA"/>
+            <Image
+              fill
+              sizes="(max-width: 768px) 100vw, 50vw"
+              className="object-cover transition-transform duration-700 group-hover:scale-105"
+              alt="AI illustration"
+              src="https://lh3.googleusercontent.com/aida-public/AB6AXuAnIEB5aZUPjaLL38WZYo1McBtakCWbD77r2BYALG8e166PaENxpdCpPKBixLeCJ6gY-EkNCgcJS-nGC-hfDKmFr4zxEhRM8sklwXeQNt8Bvnqbs4EkFr7oKF8OHQPnDVMU_WpI3kvjlegfJgLcaO1d-bLYm8NXAJZWR7y_gaHbQ0DlolXNQKhnI8L-JeY9DFZ2ud9DOfsS2neYEsRYdSpllDCmRh7J8KG4BoKoMoiVAe2mDiS9g3cjmA"
+            />
             <div className="absolute bottom-6 left-6 right-6 bg-white/80 backdrop-blur-md rounded-lg p-4 border border-white/40 shadow-lg flex items-center gap-4">
               <div className="w-12 h-12 rounded-full bg-secondary-container flex items-center justify-center text-secondary">
                 <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>mic</span>
               </div>
               <div>
                 <p className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">ИИ-Экзаменатор</p>
-                <p className="font-label-md text-label-md text-on-surface">"Объясните основную концепцию материала..."</p>
+                <p className="font-label-md text-label-md text-on-surface">&quot;Объясните основную концепцию материала...&quot;</p>
               </div>
               <div className="ml-auto flex gap-1">
                 <div className="w-1.5 h-4 bg-tertiary-fixed-dim rounded-full animate-pulse"></div>

@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional
 from sqlalchemy import String, Text, Integer, Float, DateTime, ForeignKey, JSON
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -7,6 +7,9 @@ from app.database import Base
 
 def generate_uuid() -> str:
     return str(uuid.uuid4())
+
+def utc_now() -> datetime:
+    return datetime.now(timezone.utc)
 
 class User(Base):
     __tablename__ = "users"
@@ -18,7 +21,7 @@ class User(Base):
     subscription_status: Mapped[str] = mapped_column(String(50), default="active_tier") # active_tier / free
     monthly_sessions_limit: Mapped[int] = mapped_column(Integer, default=15)
     sessions_used_this_month: Mapped[int] = mapped_column(Integer, default=0)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
     materials: Mapped[List["Material"]] = relationship("Material", back_populates="user", cascade="all, delete-orphan")
     interviews: Mapped[List["InterviewSession"]] = relationship("InterviewSession", back_populates="user", cascade="all, delete-orphan")
@@ -34,7 +37,7 @@ class Material(Base):
     page_count: Mapped[int] = mapped_column(Integer, default=0)
     chunks_count: Mapped[int] = mapped_column(Integer, default=0)
     status: Mapped[str] = mapped_column(String(50), default="processing") # processing, ready, error
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
     user: Mapped["User"] = relationship("User", back_populates="materials")
     chunks: Mapped[List["DocumentChunk"]] = relationship("DocumentChunk", back_populates="material", cascade="all, delete-orphan")
@@ -64,7 +67,7 @@ class InterviewSession(Base):
     current_question_index: Mapped[int] = mapped_column(Integer, default=0)
     overall_score: Mapped[Optional[float]] = mapped_column(Float, nullable=True) # 0-100%
     summary_report: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
     completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
     user: Mapped["User"] = relationship("User", back_populates="interviews")
@@ -84,6 +87,6 @@ class InterviewDialog(Base):
     feedback: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     missed_concepts: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True) # list of missed points
     referenced_pages: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True) # [1, 3, 5]
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
     session: Mapped["InterviewSession"] = relationship("InterviewSession", back_populates="dialogs")

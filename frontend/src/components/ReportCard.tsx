@@ -42,7 +42,7 @@ export const ReportCard: React.FC = () => {
           </p>
         </div>
         <button 
-          onClick={() => setActiveTab('dashboard')}
+          onClick={() => router.push('/dashboard')}
           className="px-4 py-2 border border-outline text-on-surface rounded-lg hover:bg-surface-variant transition-colors font-label-md flex items-center gap-2"
         >
           <span className="material-symbols-outlined">home</span>

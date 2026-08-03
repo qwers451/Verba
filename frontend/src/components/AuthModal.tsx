@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useVerbaStore } from '@/store/useVerbaStore';
+import { getApiErrorMessage } from '@/lib/api';
 
 export const AuthModal: React.FC = () => {
   const { isAuthModalOpen, setAuthModalOpen, login, register } = useVerbaStore();
@@ -25,8 +26,8 @@ export const AuthModal: React.FC = () => {
       } else {
         await register(email, password, name || 'Студент');
       }
-    } catch (err: any) {
-      setError(err.message || 'Произошла ошибка');
+    } catch (err: unknown) {
+      setError(getApiErrorMessage(err, 'Произошла ошибка'));
     } finally {
       setIsLoading(false);
     }

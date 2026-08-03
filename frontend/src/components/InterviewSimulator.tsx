@@ -1,8 +1,39 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useVerbaStore } from '@/store/useVerbaStore';
 import { useRouter } from 'next/navigation';
+
+interface SpeechRecognitionResultLike {
+  transcript: string;
+}
+
+interface SpeechRecognitionEventLike {
+  resultIndex: number;
+  results: ArrayLike<ArrayLike<SpeechRecognitionResultLike>>;
+}
+
+interface SpeechRecognitionLike {
+  lang: string;
+  interimResults: boolean;
+  continuous: boolean;
+  onstart: (() => void) | null;
+  onresult: ((event: SpeechRecognitionEventLike) => void) | null;
+  onerror: (() => void) | null;
+  onend: (() => void) | null;
+  start: () => void;
+}
+
+interface SpeechRecognitionConstructor {
+  new (): SpeechRecognitionLike;
+}
+
+declare global {
+  interface Window {
+    SpeechRecognition?: SpeechRecognitionConstructor;
+    webkitSpeechRecognition?: SpeechRecognitionConstructor;
+  }
+}
 
 export const InterviewSimulator: React.FC = () => {
   const {
@@ -24,7 +55,8 @@ export const InterviewSimulator: React.FC = () => {
     }
 
     try {
-      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) return;
       const recognition = new SpeechRecognition();
       recognition.lang = 'ru-RU';
       recognition.interimResults = true;
@@ -35,7 +67,7 @@ export const InterviewSimulator: React.FC = () => {
         setVoiceModeActive(true);
       };
 
-      recognition.onresult = (event: any) => {
+      recognition.onresult = (event) => {
         let transcript = '';
         for (let i = event.resultIndex; i < event.results.length; i++) {
           transcript += event.results[i][0].transcript;
@@ -147,7 +179,7 @@ export const InterviewSimulator: React.FC = () => {
               </div>
             </div>
             <button 
-              onClick={() => setActiveTab('dashboard')}
+              onClick={() => router.push('/dashboard')}
               className="px-4 py-2 rounded-lg border border-error text-error hover:bg-error-container transition-colors font-label-md text-label-md flex items-center gap-2"
             >
               <span className="material-symbols-outlined text-sm">close</span>

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { api } from '@/lib/api';
+import { api, getApiErrorMessage } from '@/lib/api';
+import type { DocumentChunk } from '@/types';
 
 interface ChunksViewerModalProps {
   materialId: string;
@@ -8,7 +9,7 @@ interface ChunksViewerModalProps {
 }
 
 export function ChunksViewerModal({ materialId, materialTitle, onClose }: ChunksViewerModalProps) {
-  const [chunks, setChunks] = useState<any[]>([]);
+  const [chunks, setChunks] = useState<DocumentChunk[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -18,8 +19,8 @@ export function ChunksViewerModal({ materialId, materialTitle, onClose }: Chunks
         setLoading(true);
         const data = await api.getMaterialChunks(materialId);
         setChunks(data);
-      } catch (err: any) {
-        setError(err.response?.data?.detail || 'Не удалось загрузить данные');
+      } catch (err: unknown) {
+        setError(getApiErrorMessage(err, 'Не удалось загрузить данные'));
       } finally {
         setLoading(false);
       }
