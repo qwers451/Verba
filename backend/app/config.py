@@ -9,6 +9,8 @@ class Settings(BaseSettings):
 
     # Database - Temporary SQLite for local testing without Docker
     DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./verba.db")
+    CORS_ORIGINS: str = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000")
+    JWT_SECRET_KEY: str = os.getenv("JWT_SECRET_KEY", "change-this-development-secret")
     
     # LLM Settings
     OPENAI_API_KEY: Optional[str] = os.getenv("OPENAI_API_KEY", None)

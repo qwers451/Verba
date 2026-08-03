@@ -1,12 +1,31 @@
-# For projects using Nanoc (http://nanoc.ws/)
-
-# Default location for output (needs to match output_dir's value found in nanoc.yaml)
-output/
-
-# Temporary file directory
-tmp/nanoc/
-
-# Crash Log
-crash.log
+# Environment and secrets
+.env
 backend/.env
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.egg-info/
+venv/
+.venv/
+
+# Local application data
+backend/uploads/
+backend/chroma_db/
+backend/*.db
+
+# Node.js / Next.js
+frontend/node_modules/
+frontend/.next/
+frontend/next-env.d.ts
+
+# OS and editor files
+.DS_Store
+*.swp
+
+# Local scratch output
+output/
+tmp/
+crash.log
 978-5-7996-1340-2_2014.pdf

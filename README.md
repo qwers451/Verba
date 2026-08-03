@@ -16,7 +16,7 @@
 
 ## 🛠️ Стек технологий
 
-- **Frontend**: Next.js 14, Zustand, TailwindCSS
+- **Frontend**: Next.js 15, Zustand, TailwindCSS
 - **Backend**: Python 3.12, FastAPI, SQLAlchemy (Async)
 - **База данных**: PostgreSQL с расширением `pgvector`
 - **Инфраструктура**: Docker & Docker Compose
@@ -24,7 +24,13 @@
 
 ## 🚀 Как запустить проект
 
-Убедитесь, что у вас установлен Docker и Docker Compose.
+Убедитесь, что у вас установлен Docker с Docker Compose. Для развёртывания вне локальной машины сначала подготовьте переменные окружения:
+
+```bash
+cp .env.example .env
+```
+
+Замените в `.env` значения `POSTGRES_PASSWORD` и `JWT_SECRET_KEY` на надёжные секреты. Для локального запуска этот шаг необязателен: Compose использует безопасные для разработки значения по умолчанию.
 
 ```bash
 docker-compose up -d --build
@@ -34,3 +40,11 @@ docker-compose up -d --build
 - **UI Приложение (Next.js)**: http://localhost:3000
 - **API (FastAPI)**: http://localhost:8000/api/v1
 - **Документация API**: http://localhost:8000/docs
+
+Данные PostgreSQL, загруженные материалы и векторный индекс хранятся в именованных Docker volumes. Они не попадают в Git и сохраняются при обычном `docker-compose down`.
+
+Для полного удаления локальных данных проекта используйте:
+
+```bash
+docker-compose down -v
+```

@@ -1,24 +1,36 @@
-# Pre-built frontend image
-# Build is done locally on the host (npm run build), then COPY'd in.
-# This avoids npm install inside Docker which hangs on Windows Docker Desktop.
-FROM node:20-slim
+FROM node:20-slim AS dependencies
 
 WORKDIR /app
 
-# Copy the pre-built application from host
-# .next/ contains the compiled output
-# node_modules/ are needed at runtime for next start
-# package.json is needed for npm start
-COPY package.json ./
-COPY .next ./.next
-COPY node_modules ./node_modules
-COPY public ./public
+COPY package.json package-lock.json ./
+RUN npm ci
+
+FROM dependencies AS builder
+
+WORKDIR /app
+
+COPY . ./
+
+# NEXT_PUBLIC_* variables are compiled into the browser bundle by Next.js.
+ARG NEXT_PUBLIC_API_URL=http://localhost:8000
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+ENV NEXT_TELEMETRY_DISABLED=1
+
+RUN npm run build
+
+FROM node:20-slim AS runner
+
+WORKDIR /app
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
-ENV HOSTNAME="0.0.0.0"
+ENV HOSTNAME=0.0.0.0
+
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
 
 EXPOSE 3000
 
-CMD ["npx", "next", "start"]
+CMD ["node", "server.js"]

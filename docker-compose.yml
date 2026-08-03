@@ -1,19 +1,17 @@
-version: '3.8'
-
 services:
   db:
-    image: ankane/pgvector:latest
+    image: pgvector/pgvector:pg16
     container_name: verba_db
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgrespassword
-      POSTGRES_DB: verba
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgrespassword}
+      POSTGRES_DB: ${POSTGRES_DB:-verba}
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - verba_pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d verba"]
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -22,18 +20,20 @@ services:
   backend:
     build:
       context: ./backend
-      dockerfile: Dockerfile
     container_name: verba_backend
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=postgresql+asyncpg://postgres:postgrespassword@db:5432/verba
-      - DEFAULT_LLM_PROVIDER=mock
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgrespassword}@db:5432/${POSTGRES_DB:-verba}
+      DEFAULT_LLM_PROVIDER: ${DEFAULT_LLM_PROVIDER:-mock}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-change-this-development-secret}
     depends_on:
       db:
         condition: service_healthy
     volumes:
-      - ./backend/uploads:/app/uploads
+      - verba_uploads:/app/uploads
+      - verba_chroma:/app/chroma_db
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/')\""]
       interval: 10s
@@ -44,15 +44,16 @@ services:
   frontend:
     build:
       context: ./frontend
-      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
     container_name: verba_frontend
     ports:
       - "3000:3000"
-    environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:8000
     depends_on:
       backend:
         condition: service_healthy
 
 volumes:
   verba_pgdata:
+  verba_uploads:
+  verba_chroma:

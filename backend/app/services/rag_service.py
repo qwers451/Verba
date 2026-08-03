@@ -1,4 +1,6 @@
 import os
+import hashlib
+import math
 from typing import List, Tuple
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -37,7 +39,30 @@ class RAGService:
         """
         Legacy mock embedding function for backwards compatibility.
         """
-        return []
+        if dim <= 0:
+            raise ValueError("dim must be positive")
+
+        vector = [0.0] * dim
+        for token in text.lower().split():
+            digest = hashlib.sha256(token.encode("utf-8")).digest()
+            index = int.from_bytes(digest[:4], "big") % dim
+            vector[index] += 1.0 if digest[4] % 2 == 0 else -1.0
+
+        magnitude = math.sqrt(sum(value * value for value in vector))
+        return [value / magnitude for value in vector] if magnitude else vector
+
+    @staticmethod
+    def cosine_similarity(first: List[float], second: List[float]) -> float:
+        """Return cosine similarity for two vectors without external dependencies."""
+        if len(first) != len(second):
+            raise ValueError("vectors must have the same dimension")
+
+        first_magnitude = math.sqrt(sum(value * value for value in first))
+        second_magnitude = math.sqrt(sum(value * value for value in second))
+        if not first_magnitude or not second_magnitude:
+            return 0.0
+
+        return sum(a * b for a, b in zip(first, second)) / (first_magnitude * second_magnitude)
 
     @classmethod
     async def retrieve_relevant_chunks(

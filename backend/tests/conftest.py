@@ -4,6 +4,8 @@ from httpx import AsyncClient, ASGITransport
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from app.main import app
 from app.database import Base, get_db
+from app.models import User
+from app.api.auth import create_access_token, get_password_hash
 
 # Use an in-memory sqlite db for tests
 SQLALCHEMY_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
@@ -30,3 +32,20 @@ async def db_setup():
 async def client():
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         yield ac
+
+@pytest_asyncio.fixture(scope="function")
+async def auth_headers():
+    async with TestingSessionLocal() as session:
+        user = User(
+            email="student@example.com",
+            name="Test Student",
+            hashed_password=get_password_hash("test-password"),
+            subscription_status="active_tier",
+            monthly_sessions_limit=15,
+            sessions_used_this_month=0,
+        )
+        session.add(user)
+        await session.commit()
+
+    token = create_access_token({"sub": user.email})
+    return {"Authorization": f"Bearer {token}"}
