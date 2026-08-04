@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { UserProfile, Material, InterviewSession, AnswerEvaluation, FinalReport, DocumentChunk } from '@/types';
+import { UserProfile, Material, InterviewSession, AnswerEvaluation, FinalReport, DocumentChunk, DashboardSummary, InterviewHistoryItem, Payment, SubscriptionPlan } from '@/types';
 
 export const getApiErrorMessage = (error: unknown, fallback: string): string => {
   if (axios.isAxiosError<{ detail?: string }>(error)) {
@@ -47,6 +47,31 @@ export const api = {
     return res.data;
   },
 
+  getDashboardSummary: async (): Promise<DashboardSummary> => {
+    const res = await apiClient.get('/dashboard/summary');
+    return res.data;
+  },
+
+  getSubscriptionPlans: async (): Promise<SubscriptionPlan[]> => {
+    const res = await apiClient.get('/billing/plans');
+    return res.data;
+  },
+
+  createYookassaCheckout: async (planCode: 'pro'): Promise<{ payment: Payment; confirmation_url: string }> => {
+    const res = await apiClient.post('/billing/yookassa/checkout', { plan_code: planCode });
+    return res.data;
+  },
+
+  refreshPaymentStatus: async (paymentId: string): Promise<Payment> => {
+    const res = await apiClient.get(`/billing/payments/${paymentId}/status`);
+    return res.data;
+  },
+
+  getPayments: async (): Promise<Payment[]> => {
+    const res = await apiClient.get('/billing/payments');
+    return res.data;
+  },
+
   uploadMaterial: async (file: File): Promise<Material> => {
     const formData = new FormData();
     formData.append('file', file);
@@ -90,6 +115,11 @@ export const api = {
 
   getInterviewSession: async (sessionId: string): Promise<InterviewSession> => {
     const res = await apiClient.get(`/interviews/${sessionId}`);
+    return res.data;
+  },
+
+  listInterviews: async (): Promise<InterviewHistoryItem[]> => {
+    const res = await apiClient.get('/interviews');
     return res.data;
   },
 

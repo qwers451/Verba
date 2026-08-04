@@ -6,6 +6,46 @@ export interface UserProfile {
   monthly_sessions_limit: number;
   sessions_used_this_month: number;
   sessions_remaining: number;
+  subscription_title: string;
+}
+
+export interface SubscriptionPlan {
+  code: 'free' | 'pro';
+  title: string;
+  price_rub: number;
+  monthly_session_limit: number;
+  features: string[];
+  is_current: boolean;
+}
+
+export interface Payment {
+  id: string;
+  plan_code: string;
+  amount_rub: number;
+  status: string;
+  provider: string;
+  created_at: string;
+}
+
+export interface DashboardSummary {
+  material_count: number;
+  completed_sessions: number;
+  active_sessions: number;
+  average_score?: number | null;
+  sessions_remaining: number;
+  monthly_sessions_limit: number;
+  sessions_used_this_month: number;
+}
+
+export interface InterviewHistoryItem {
+  id: string;
+  material_id: string;
+  material_title: string;
+  status: 'in_progress' | 'completed';
+  overall_score?: number | null;
+  total_questions: number;
+  created_at: string;
+  completed_at?: string | null;
 }
 
 export interface Material {

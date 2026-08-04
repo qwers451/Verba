@@ -11,6 +11,9 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "Verba AI - Подготовка к устным экзаменам",
   description: "AI-powered oral exam preparation platform",
+  icons: {
+    icon: "/Verba_Logo_with_Speech_Bubbles_and_Book-removebg-preview.png",
+  },
 };
 
 export default function RootLayout({

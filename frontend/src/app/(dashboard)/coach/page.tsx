@@ -1,11 +1,5 @@
-export default function PlaceholderPage() {
-  return (
-    <div className="flex flex-col items-center justify-center h-full min-h-[60vh] text-center w-full">
-      <span className="material-symbols-outlined text-[64px] text-on-surface-variant/30 mb-4">construction</span>
-      <h2 className="font-headline-md text-headline-md text-on-surface mb-2">В разработке</h2>
-      <p className="font-body-md text-body-md text-on-surface-variant max-w-md">
-        Этот раздел находится в стадии разработки. Скоро здесь появится новый функционал.
-      </p>
-    </div>
-  );
+import Link from 'next/link';
+
+export default function CoachPage() {
+  return <div className="max-w-5xl mx-auto grid gap-6"><section className="glass-card rounded-xl p-6"><p className="text-secondary font-label-sm">AI-ТРЕНЕР · ДЕМО-РЕЖИМ</p><h2 className="mt-2 font-headline-md text-[26px] text-on-surface">Ваш маршрут подготовки</h2><p className="mt-2 max-w-2xl text-on-surface-variant">В этой версии тренер помогает пройти пользовательский сценарий и показывает логику продукта. Персональные рекомендации на основе модели и ответов пользователя — следующий этап разработки.</p></section><section className="grid md:grid-cols-3 gap-4">{[{icon:'upload_file', title:'1. Добавьте материал', text:'Загрузите конспект или учебный PDF.' , href:'/materials'}, {icon:'record_voice_over', title:'2. Пройдите тренировку', text:'Ответьте на вопросы по материалу.', href:'/interview'}, {icon:'fact_check', title:'3. Посмотрите результат', text:'Вернитесь к завершённой сессии и её отчёту.', href:'/exams'}].map((item) => <Link href={item.href} key={item.title} className="rounded-xl bg-surface-container-low p-5 hover:bg-surface-container transition-colors"><span className="material-symbols-outlined text-secondary">{item.icon}</span><h3 className="mt-4 text-on-surface font-headline-md text-[19px]">{item.title}</h3><p className="mt-2 text-on-surface-variant font-label-sm">{item.text}</p></Link>)}</section></div>;
 }

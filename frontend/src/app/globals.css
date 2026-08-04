@@ -1,30 +1,30 @@
 @import "tailwindcss";
 
 @theme {
-  --color-surface: #f8f9ff;
-  --color-surface-dim: #cbdbf5;
-  --color-surface-bright: #f8f9ff;
+  --color-surface: #f7f8fc;
+  --color-surface-dim: #e7eaf2;
+  --color-surface-bright: #ffffff;
   --color-surface-container-lowest: #ffffff;
-  --color-surface-container-low: #eff4ff;
-  --color-surface-container: #e5eeff;
-  --color-surface-container-high: #dce9ff;
-  --color-surface-container-highest: #d3e4fe;
-  --color-on-surface: #0b1c30;
-  --color-on-surface-variant: #464652;
+  --color-surface-container-low: #f0f3fa;
+  --color-surface-container: #e6ebf6;
+  --color-surface-container-high: #dae3f2;
+  --color-surface-container-highest: #ced9ea;
+  --color-on-surface: #14213d;
+  --color-on-surface-variant: #5c667a;
   --color-inverse-surface: #213145;
   --color-inverse-on-surface: #eaf1ff;
   --color-outline: #777683;
   --color-outline-variant: #c7c5d4;
   --color-surface-tint: #4f54b4;
-  --color-primary: #15157d;
+  --color-primary: #202c62;
   --color-on-primary: #ffffff;
-  --color-primary-container: #2e3192;
-  --color-on-primary-container: #9da1ff;
+  --color-primary-container: #e3e9ff;
+  --color-on-primary-container: #202c62;
   --color-inverse-primary: #c0c1ff;
-  --color-secondary: #0056c6;
+  --color-secondary: #4169e1;
   --color-on-secondary: #ffffff;
-  --color-secondary-container: #006df8;
-  --color-on-secondary-container: #fefcff;
+  --color-secondary-container: #e1e9ff;
+  --color-on-secondary-container: #1e3a8a;
   --color-tertiary: #002f1e;
   --color-on-tertiary: #ffffff;
   --color-tertiary-container: #004830;
@@ -71,11 +71,34 @@ body {
   color: var(--color-on-background);
 }
 
+* { box-sizing: border-box; }
+
+::selection { background: #dce6ff; color: #14213d; }
+
+.app-shell {
+  background:
+    radial-gradient(circle at 100% 0%, rgba(101, 128, 255, 0.12), transparent 27rem),
+    radial-gradient(circle at 0% 100%, rgba(127, 215, 190, 0.10), transparent 28rem),
+    var(--color-background);
+}
+
+.elevated-card {
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid rgba(173, 186, 211, 0.48);
+  box-shadow: 0 12px 32px rgba(27, 45, 83, 0.07);
+  backdrop-filter: blur(14px);
+}
+
+.focus-ring:focus-visible {
+  outline: 3px solid rgba(65, 105, 225, 0.35);
+  outline-offset: 3px;
+}
+
 .glass-card {
-    background: rgba(255, 255, 255, 0.7);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.5);
-    box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.05);
+    background: rgba(255, 255, 255, 0.88);
+    backdrop-filter: blur(14px);
+    border: 1px solid rgba(173, 186, 211, 0.48);
+    box-shadow: 0 12px 32px rgba(27, 45, 83, 0.07);
 }
 
 .hover-lift { 

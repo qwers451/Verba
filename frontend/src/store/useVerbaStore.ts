@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { UserProfile, Material, InterviewSession, AnswerEvaluation, FinalReport } from '@/types';
+import { UserProfile, Material, InterviewSession, AnswerEvaluation, FinalReport, DashboardSummary, InterviewHistoryItem, Payment, SubscriptionPlan } from '@/types';
 import { api, getApiErrorMessage } from '@/lib/api';
 
 interface VerbaState {
@@ -16,6 +16,18 @@ interface VerbaState {
   user: UserProfile | null;
   isLoadingUser: boolean;
   fetchUser: () => Promise<void>;
+
+  // Dashboard and billing
+  dashboardSummary: DashboardSummary | null;
+  interviewHistory: InterviewHistoryItem[];
+  plans: SubscriptionPlan[];
+  payments: Payment[];
+  isLoadingDashboard: boolean;
+  isCheckingOut: boolean;
+  fetchDashboard: () => Promise<void>;
+  fetchPlans: () => Promise<void>;
+  fetchPayments: () => Promise<void>;
+  createYookassaCheckout: () => Promise<string>;
 
   // Materials
   materials: Material[];
@@ -57,6 +69,9 @@ export const useVerbaStore = create<VerbaState>((set, get) => ({
       set({ token: res.access_token, isAuthModalOpen: false });
       await get().fetchUser();
       await get().fetchMaterials();
+      await get().fetchDashboard();
+      await get().fetchPlans();
+      await get().fetchPayments();
     } catch (err: unknown) {
       throw new Error(getApiErrorMessage(err, 'Ошибка авторизации'));
     }
@@ -69,13 +84,15 @@ export const useVerbaStore = create<VerbaState>((set, get) => ({
       set({ token: res.access_token, isAuthModalOpen: false });
       await get().fetchUser();
       await get().fetchMaterials();
+      await get().fetchDashboard();
+      await get().fetchPlans();
     } catch (err: unknown) {
       throw new Error(getApiErrorMessage(err, 'Ошибка регистрации'));
     }
   },
   logout: () => {
     localStorage.removeItem('verba_token');
-    set({ token: null, user: null, materials: [], activeSession: null });
+    set({ token: null, user: null, materials: [], activeSession: null, dashboardSummary: null, interviewHistory: [], plans: [], payments: [] });
   },
   hydrateAuth: () => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('verba_token') : null;
@@ -84,6 +101,9 @@ export const useVerbaStore = create<VerbaState>((set, get) => ({
       set({ token });
       get().fetchUser().catch(() => get().logout());
       get().fetchMaterials();
+      get().fetchDashboard();
+      get().fetchPlans();
+      get().fetchPayments();
     }
   },
 
@@ -98,6 +118,55 @@ export const useVerbaStore = create<VerbaState>((set, get) => ({
       console.error('Error fetching user:', err);
       set({ isLoadingUser: false });
       throw err;
+    }
+  },
+
+  dashboardSummary: null,
+  interviewHistory: [],
+  plans: [],
+  payments: [],
+  isLoadingDashboard: false,
+  isCheckingOut: false,
+  fetchDashboard: async () => {
+    set({ isLoadingDashboard: true });
+    try {
+      const [dashboardSummary, interviewHistory] = await Promise.all([api.getDashboardSummary(), api.listInterviews()]);
+      set({ dashboardSummary, interviewHistory, isLoadingDashboard: false });
+    } catch (err) {
+      console.error('Error fetching dashboard:', err);
+      set({ isLoadingDashboard: false });
+    }
+  },
+  fetchPlans: async () => {
+    try {
+      set({ plans: await api.getSubscriptionPlans() });
+    } catch (err) {
+      console.error('Error fetching plans:', err);
+    }
+  },
+  fetchPayments: async () => {
+    try {
+      const payments = await api.getPayments();
+      const refreshedPayments = await Promise.all(payments.map(async (payment) => (
+        payment.status === 'pending' ? api.refreshPaymentStatus(payment.id) : payment
+      )));
+      set({ payments: refreshedPayments });
+      if (refreshedPayments.some((payment, index) => payment.status !== payments[index].status)) {
+        await Promise.all([get().fetchUser(), get().fetchPlans(), get().fetchDashboard()]);
+      }
+    } catch (err) {
+      console.error('Error fetching payments:', err);
+    }
+  },
+  createYookassaCheckout: async () => {
+    set({ isCheckingOut: true });
+    try {
+      const checkout = await api.createYookassaCheckout('pro');
+      return checkout.confirmation_url;
+    } catch (err: unknown) {
+      throw new Error(getApiErrorMessage(err, 'Не удалось создать платёж ЮKassa.'));
+    } finally {
+      set({ isCheckingOut: false });
     }
   },
 
@@ -163,6 +232,7 @@ export const useVerbaStore = create<VerbaState>((set, get) => ({
         isStartingInterview: false,
       });
       get().fetchUser(); // Refresh quota count
+      get().fetchDashboard();
       return session.id;
     } catch (err: unknown) {
       alert(getApiErrorMessage(err, 'Не удалось начать сессию собеседования.'));

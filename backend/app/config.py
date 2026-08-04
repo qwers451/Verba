@@ -23,6 +23,11 @@ class Settings(BaseSettings):
     MONTHLY_SESSION_LIMIT: int = 15
     MAX_FILE_SIZE_MB: int = 50
 
+    # YooKassa test/production credentials. Keep the secret only in .env.
+    YOOKASSA_SHOP_ID: Optional[str] = os.getenv("YOOKASSA_SHOP_ID", None)
+    YOOKASSA_SECRET_KEY: Optional[str] = os.getenv("YOOKASSA_SECRET_KEY", None)
+    PAYMENT_RETURN_URL: str = os.getenv("PAYMENT_RETURN_URL", "http://localhost:3000/settings?payment=return")
+
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
 settings = Settings()

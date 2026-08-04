@@ -1,11 +1,4 @@
-export default function PlaceholderPage() {
-  return (
-    <div className="flex flex-col items-center justify-center h-full min-h-[60vh] text-center w-full">
-      <span className="material-symbols-outlined text-[64px] text-on-surface-variant/30 mb-4">construction</span>
-      <h2 className="font-headline-md text-headline-md text-on-surface mb-2">В разработке</h2>
-      <p className="font-body-md text-body-md text-on-surface-variant max-w-md">
-        Этот раздел находится в стадии разработки. Скоро здесь появится новый функционал.
-      </p>
-    </div>
-  );
+export default function HelpPage() {
+  const faq = [['Как начать?', 'Создайте аккаунт, загрузите PDF в разделе «Мои материалы» и запустите тренировочную сессию.'], ['Что происходит с PDF?', 'Сервис сохраняет файл в вашем рабочем пространстве, извлекает текст и готовит его к дальнейшей работе.'], ['Это уже финальная нейросеть?', 'Нет. На этапе 1 вопросы, оценка и рекомендации работают как прозрачный mock-сценарий. Полный интеллектуальный модуль — этапы 2–3.'], ['Как работает оплата?', 'Раздел «Настройки» содержит только тестовую имитацию оплаты. Реальных платежей и списаний нет.']];
+  return <section className="max-w-4xl mx-auto glass-card rounded-xl p-6"><p className="text-secondary font-label-sm">ПОМОЩЬ</p><h2 className="mt-2 font-headline-md text-[26px] text-on-surface">Частые вопросы</h2><div className="mt-6 grid gap-3">{faq.map(([question, answer]) => <article key={question} className="rounded-xl bg-surface-container-low p-5"><h3 className="font-label-md text-label-md text-on-surface">{question}</h3><p className="mt-2 text-on-surface-variant">{answer}</p></article>)}</div></section>;
 }

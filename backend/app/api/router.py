@@ -1,14 +1,15 @@
 import os
 import shutil
+from datetime import datetime, timezone
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Request, status
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from app.database import get_db
 from app.config import settings
-from app.models import User, Material, DocumentChunk, InterviewSession, InterviewDialog
+from app.models import User, Material, DocumentChunk, InterviewSession, InterviewDialog, Payment
 from app.schemas import (
     UserProfileResponse,
     MaterialResponse,
@@ -18,11 +19,19 @@ from app.schemas import (
     AnswerEvaluationResponse,
     FinalReportResponse,
     DialogItem,
-    DocumentChunkResponse
+    DocumentChunkResponse,
+    DashboardSummaryResponse,
+    InterviewHistoryItemResponse,
+    MockCheckoutRequest,
+    CheckoutResponse,
+    PaymentResponse,
+    SubscriptionPlanResponse,
 )
 from app.services.pdf_service import PDFProcessingService
 from app.services.rag_service import RAGService
 from app.services.llm_service import LLMService
+from app.services.billing_service import FREE_PLAN_CODE, PRO_PLAN_CODE, get_plans, normalize_plan_code
+from app.services.yookassa_service import YooKassaConfigurationError, create_checkout, get_payment_status
 from langchain_core.documents import Document
 
 router = APIRouter()
@@ -36,11 +45,135 @@ async def get_user_profile(user: User = Depends(get_current_user)):
         id=user.id,
         email=user.email,
         name=user.name,
-        subscription_status=user.subscription_status,
+        subscription_status=normalize_plan_code(user.subscription_status),
         monthly_sessions_limit=user.monthly_sessions_limit,
         sessions_used_this_month=user.sessions_used_this_month,
-        sessions_remaining=remaining
+        sessions_remaining=remaining,
+        subscription_title=next(
+            plan["title"] for plan in get_plans() if plan["code"] == normalize_plan_code(user.subscription_status)
+        ),
     )
+
+@router.get("/dashboard/summary", response_model=DashboardSummaryResponse)
+async def get_dashboard_summary(
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    material_count = (await db.execute(
+        select(func.count(Material.id)).where(Material.user_id == user.id)
+    )).scalar_one()
+    completed_sessions = (await db.execute(
+        select(func.count(InterviewSession.id)).where(
+            InterviewSession.user_id == user.id, InterviewSession.status == "completed"
+        )
+    )).scalar_one()
+    active_sessions = (await db.execute(
+        select(func.count(InterviewSession.id)).where(
+            InterviewSession.user_id == user.id, InterviewSession.status == "in_progress"
+        )
+    )).scalar_one()
+    average_score = (await db.execute(
+        select(func.avg(InterviewSession.overall_score)).where(
+            InterviewSession.user_id == user.id, InterviewSession.status == "completed"
+        )
+    )).scalar_one()
+    return DashboardSummaryResponse(
+        material_count=material_count,
+        completed_sessions=completed_sessions,
+        active_sessions=active_sessions,
+        average_score=round(float(average_score), 1) if average_score is not None else None,
+        sessions_remaining=max(0, user.monthly_sessions_limit - user.sessions_used_this_month),
+        monthly_sessions_limit=user.monthly_sessions_limit,
+        sessions_used_this_month=user.sessions_used_this_month,
+    )
+
+@router.get("/billing/plans", response_model=List[SubscriptionPlanResponse])
+async def list_subscription_plans(user: User = Depends(get_current_user)):
+    current_plan = normalize_plan_code(user.subscription_status)
+    return [{**plan, "is_current": plan["code"] == current_plan} for plan in get_plans()]
+
+@router.post("/billing/yookassa/checkout", response_model=CheckoutResponse)
+async def create_yookassa_checkout(
+    payload: MockCheckoutRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    if payload.plan_code != PRO_PLAN_CODE:
+        raise HTTPException(status_code=400, detail="Для оплаты доступен только тариф Pro.")
+    pro_plan = next(plan for plan in get_plans() if plan["code"] == PRO_PLAN_CODE)
+    payment = Payment(
+        user_id=user.id,
+        plan_code=PRO_PLAN_CODE,
+        amount_rub=pro_plan["price_rub"],
+        status="pending",
+        provider="yookassa_test",
+    )
+    db.add(payment)
+    await db.flush()
+    try:
+        provider_id, provider_status, confirmation_url = await create_checkout(
+            payment_id=payment.id,
+            amount_rub=payment.amount_rub,
+            description="Verba AI — тариф Pro (тестовый платёж)",
+        )
+    except YooKassaConfigurationError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail="Не удалось создать платёж в ЮKassa. Повторите попытку позже.") from exc
+    payment.provider_payment_id = provider_id
+    payment.status = provider_status
+    await db.commit()
+    await db.refresh(payment)
+    return CheckoutResponse(payment=payment, confirmation_url=confirmation_url)
+
+@router.get("/billing/payments/{payment_id}/status", response_model=PaymentResponse)
+async def refresh_yookassa_payment_status(
+    payment_id: str, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
+):
+    payment = await db.get(Payment, payment_id)
+    if not payment or payment.user_id != user.id:
+        raise HTTPException(status_code=404, detail="Платёж не найден.")
+    await synchronize_yookassa_payment(payment, db)
+    return payment
+
+@router.post("/billing/yookassa/webhook")
+async def yookassa_webhook(request: Request, db: AsyncSession = Depends(get_db)):
+    payload = await request.json()
+    provider_payment_id = payload.get("object", {}).get("id")
+    if not provider_payment_id:
+        raise HTTPException(status_code=400, detail="Некорректное уведомление ЮKassa.")
+    result = await db.execute(select(Payment).where(Payment.provider_payment_id == provider_payment_id))
+    payment = result.scalars().first()
+    if payment:
+        await synchronize_yookassa_payment(payment, db)
+    return {"status": "ok"}
+
+async def synchronize_yookassa_payment(payment: Payment, db: AsyncSession) -> None:
+    if payment.provider != "yookassa_test" or not payment.provider_payment_id:
+        return
+    try:
+        payment.status = await get_payment_status(payment.provider_payment_id)
+    except YooKassaConfigurationError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail="Не удалось проверить статус платежа в ЮKassa.") from exc
+    if payment.status == "succeeded":
+        user = await db.get(User, payment.user_id)
+        pro_plan = next(plan for plan in get_plans() if plan["code"] == PRO_PLAN_CODE)
+        if user:
+            user.subscription_status = PRO_PLAN_CODE
+            user.monthly_sessions_limit = pro_plan["monthly_session_limit"]
+    await db.commit()
+    await db.refresh(payment)
+
+@router.get("/billing/payments", response_model=List[PaymentResponse])
+async def list_payments(
+    user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
+):
+    result = await db.execute(
+        select(Payment).where(Payment.user_id == user.id).order_by(Payment.created_at.desc())
+    )
+    return result.scalars().all()
 
 @router.post("/materials/upload", response_model=MaterialResponse)
 async def upload_material(
@@ -48,7 +181,7 @@ async def upload_material(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    if not file.filename.endswith(".pdf"):
+    if not file.filename or not file.filename.lower().endswith(".pdf"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Поддерживаются только файлы формата PDF."
@@ -217,7 +350,7 @@ async def start_interview(
 
     # Fetch material
     material = await db.get(Material, payload.material_id)
-    if not material:
+    if not material or material.user_id != user.id:
         raise HTTPException(status_code=404, detail="Учебный материал не найден.")
 
     # Fetch chunks
@@ -270,20 +403,45 @@ async def start_interview(
     # Load complete session with dialogs
     return await get_session_response(session.id, db)
 
+@router.get("/interviews", response_model=List[InterviewHistoryItemResponse])
+async def list_interviews(
+    user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
+):
+    result = await db.execute(
+        select(InterviewSession, Material.title)
+        .join(Material, Material.id == InterviewSession.material_id)
+        .where(InterviewSession.user_id == user.id)
+        .order_by(InterviewSession.created_at.desc())
+    )
+    return [
+        InterviewHistoryItemResponse(
+            id=session.id, material_id=session.material_id, material_title=material_title,
+            status=session.status, overall_score=session.overall_score,
+            total_questions=session.total_questions, created_at=session.created_at,
+            completed_at=session.completed_at,
+        )
+        for session, material_title in result.all()
+    ]
+
 @router.get("/interviews/{session_id}", response_model=InterviewSessionResponse)
 async def get_interview_session(
     session_id: str,
+    user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
+    await ensure_session_owner(session_id, user.id, db)
     return await get_session_response(session_id, db)
 
 @router.post("/interviews/answer", response_model=AnswerEvaluationResponse)
 async def submit_answer(
     payload: SubmitAnswerRequest,
+    user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     session = await db.get(InterviewSession, payload.session_id)
     if not session:
+        raise HTTPException(status_code=404, detail="Сессия собеседования не найдена.")
+    if session.user_id != user.id:
         raise HTTPException(status_code=404, detail="Сессия собеседования не найдена.")
 
     # Find dialog item
@@ -325,6 +483,7 @@ async def submit_answer(
     is_last = payload.question_number >= session.total_questions
     if is_last:
         session.status = "completed"
+        session.completed_at = datetime.now(timezone.utc)
         # Calculate overall score
         all_dialogs_res = await db.execute(
             select(InterviewDialog).where(InterviewDialog.session_id == session.id)
@@ -348,10 +507,13 @@ async def submit_answer(
 @router.get("/interviews/{session_id}/report", response_model=FinalReportResponse)
 async def get_interview_report(
     session_id: str,
+    user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     session = await db.get(InterviewSession, session_id)
     if not session:
+        raise HTTPException(status_code=404, detail="Сессия не найдена.")
+    if session.user_id != user.id:
         raise HTTPException(status_code=404, detail="Сессия не найдена.")
 
     material = await db.get(Material, session.material_id)
@@ -441,3 +603,9 @@ async def get_session_response(session_id: str, db: AsyncSession) -> InterviewSe
         dialogs=dialog_items,
         created_at=session.created_at
     )
+
+async def ensure_session_owner(session_id: str, user_id: str, db: AsyncSession) -> InterviewSession:
+    session = await db.get(InterviewSession, session_id)
+    if not session or session.user_id != user_id:
+        raise HTTPException(status_code=404, detail="Сессия не найдена.")
+    return session

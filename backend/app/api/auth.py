@@ -11,12 +11,13 @@ from app.database import get_db
 from app.config import settings
 from app.models import User
 from app.schemas import UserCreate, UserProfileResponse, Token
+from app.services.billing_service import FREE_PLAN_CODE, get_plans
 
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7 # 7 days
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/v1/auth/token")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/token")
 
 router = APIRouter()
 
@@ -72,8 +73,8 @@ async def register(user_in: UserCreate, db: AsyncSession = Depends(get_db)):
         email=user_in.email,
         name=user_in.name,
         hashed_password=hashed_password,
-        subscription_status="active_tier",
-        monthly_sessions_limit=settings.MONTHLY_SESSION_LIMIT,
+        subscription_status=FREE_PLAN_CODE,
+        monthly_sessions_limit=3,
         sessions_used_this_month=0
     )
     db.add(new_user)
@@ -88,7 +89,8 @@ async def register(user_in: UserCreate, db: AsyncSession = Depends(get_db)):
         subscription_status=new_user.subscription_status,
         monthly_sessions_limit=new_user.monthly_sessions_limit,
         sessions_used_this_month=new_user.sessions_used_this_month,
-        sessions_remaining=remaining
+        sessions_remaining=remaining,
+        subscription_title=get_plans()[0]["title"],
     )
 
 @router.post("/token", response_model=Token)

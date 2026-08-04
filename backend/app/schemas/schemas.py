@@ -16,12 +16,58 @@ class UserProfileResponse(UserBase):
     monthly_sessions_limit: int
     sessions_used_this_month: int
     sessions_remaining: int
+    subscription_title: str
 
     model_config = ConfigDict(from_attributes=True)
 
 class Token(BaseModel):
     access_token: str
     token_type: str
+
+class SubscriptionPlanResponse(BaseModel):
+    code: str
+    title: str
+    price_rub: int
+    monthly_session_limit: int
+    features: List[str]
+    is_current: bool = False
+
+class MockCheckoutRequest(BaseModel):
+    plan_code: str
+
+class PaymentResponse(BaseModel):
+    id: str
+    plan_code: str
+    amount_rub: int
+    status: str
+    provider: str
+    provider_payment_id: Optional[str] = None
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+class CheckoutResponse(BaseModel):
+    payment: PaymentResponse
+    confirmation_url: str
+
+class DashboardSummaryResponse(BaseModel):
+    material_count: int
+    completed_sessions: int
+    active_sessions: int
+    average_score: Optional[float] = None
+    sessions_remaining: int
+    monthly_sessions_limit: int
+    sessions_used_this_month: int
+
+class InterviewHistoryItemResponse(BaseModel):
+    id: str
+    material_id: str
+    material_title: str
+    status: str
+    overall_score: Optional[float] = None
+    total_questions: int
+    created_at: datetime
+    completed_at: Optional[datetime] = None
 
 # Material Schemas
 class MaterialResponse(BaseModel):

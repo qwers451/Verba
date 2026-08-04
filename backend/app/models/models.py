@@ -18,13 +18,28 @@ class User(Base):
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=True) # temporarily nullable for existing DB
     name: Mapped[str] = mapped_column(String(255), default="Студент")
-    subscription_status: Mapped[str] = mapped_column(String(50), default="active_tier") # active_tier / free
-    monthly_sessions_limit: Mapped[int] = mapped_column(Integer, default=15)
+    subscription_status: Mapped[str] = mapped_column(String(50), default="free")
+    monthly_sessions_limit: Mapped[int] = mapped_column(Integer, default=3)
     sessions_used_this_month: Mapped[int] = mapped_column(Integer, default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
     materials: Mapped[List["Material"]] = relationship("Material", back_populates="user", cascade="all, delete-orphan")
     interviews: Mapped[List["InterviewSession"]] = relationship("InterviewSession", back_populates="user", cascade="all, delete-orphan")
+    payments: Mapped[List["Payment"]] = relationship("Payment", back_populates="user", cascade="all, delete-orphan")
+
+class Payment(Base):
+    __tablename__ = "payments"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
+    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    plan_code: Mapped[str] = mapped_column(String(50), nullable=False)
+    amount_rub: Mapped[int] = mapped_column(Integer, nullable=False)
+    status: Mapped[str] = mapped_column(String(50), default="succeeded")
+    provider: Mapped[str] = mapped_column(String(50), default="mock")
+    provider_payment_id: Mapped[Optional[str]] = mapped_column(String(64), unique=True, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+    user: Mapped["User"] = relationship("User", back_populates="payments")
 
 class Material(Base):
     __tablename__ = "materials"

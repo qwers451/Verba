@@ -1,70 +1,79 @@
 'use client';
 
-import React from 'react';
+import Link from 'next/link';
+import { useEffect } from 'react';
 import { MaterialUploader } from '@/components/MaterialUploader';
+import { useVerbaStore } from '@/store/useVerbaStore';
+
+const formatDate = (value: string) => new Intl.DateTimeFormat('ru-RU', {
+  day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
+}).format(new Date(value));
 
 export default function DashboardPage() {
+  const { dashboardSummary, interviewHistory, isLoadingDashboard, fetchDashboard, user } = useVerbaStore();
+
+  useEffect(() => { void fetchDashboard(); }, [fetchDashboard]);
+
+  const quotaPercent = dashboardSummary
+    ? Math.round((dashboardSummary.sessions_used_this_month / dashboardSummary.monthly_sessions_limit) * 100)
+    : 0;
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-12 gap-gutter max-w-7xl mx-auto w-full">
-      {/* Overall Progress Chart Placeholder - Spans 8 cols */}
-      <section className="col-span-1 md:col-span-8 glass-card rounded-xl p-6 hover-lift relative overflow-hidden w-full">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="font-headline-md text-[20px] text-on-surface">Общий прогресс</h2>
-          <span className="font-label-sm text-label-sm bg-surface-container-high text-primary px-3 py-1 rounded-full">Последние 30 дней</span>
+      <section className="col-span-1 md:col-span-8 elevated-card rounded-2xl p-6 md:p-7 relative overflow-hidden w-full">
+        <div className="flex flex-wrap justify-between items-start gap-4 mb-6">
+          <div>
+            <p className="font-label-sm text-label-sm text-secondary mb-2">Текущий тариф: {user?.subscription_title ?? '—'}</p>
+            <h2 className="font-headline-md text-[22px] text-on-surface">Ваш учебный ритм</h2>
+          </div>
+          <Link href="/settings" className="font-label-sm text-label-sm text-secondary hover:underline">Управлять тарифом</Link>
         </div>
-        
-        <div className="h-48 w-full bg-surface-container-low rounded-lg relative flex items-end justify-around p-4">
-          <div className="w-1/12 bg-primary-container rounded-t-sm h-1/4 opacity-60"></div>
-          <div className="w-1/12 bg-primary-container rounded-t-sm h-2/4 opacity-70"></div>
-          <div className="w-1/12 bg-primary-container rounded-t-sm h-1/3 opacity-80"></div>
-          <div className="w-1/12 bg-primary-container rounded-t-sm h-3/4 opacity-90"></div>
-          <div className="w-1/12 bg-secondary rounded-t-sm h-full relative">
-            <div className="absolute -top-8 left-1/2 -translate-x-1/2 font-label-sm text-label-sm bg-inverse-surface text-inverse-on-surface px-2 py-1 rounded">92%</div>
-          </div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <Metric icon="library_books" label="Материалов" value={dashboardSummary?.material_count ?? 0} loading={isLoadingDashboard} />
+          <Metric icon="task_alt" label="Завершено" value={dashboardSummary?.completed_sessions ?? 0} loading={isLoadingDashboard} />
+          <Metric icon="play_circle" label="В процессе" value={dashboardSummary?.active_sessions ?? 0} loading={isLoadingDashboard} />
+          <Metric icon="grade" label="Средний балл" value={dashboardSummary?.average_score ? `${dashboardSummary.average_score}/100` : '—'} loading={isLoadingDashboard} />
         </div>
-        
-        <div className="grid grid-cols-3 gap-4 mt-6 border-t border-surface-container-high pt-4">
-          <div>
-            <div className="font-label-sm text-label-sm text-on-surface-variant mb-1">Средний балл</div>
-            <div className="font-headline-md text-headline-md text-primary">88/100</div>
+        <div className="mt-7 p-4 rounded-xl bg-primary text-white">
+          <div className="flex justify-between gap-3 text-white mb-2">
+            <span className="font-label-md text-label-md">Сессии в этом месяце</span>
+            <span className="font-label-md text-label-md">{dashboardSummary?.sessions_used_this_month ?? 0} из {dashboardSummary?.monthly_sessions_limit ?? user?.monthly_sessions_limit ?? 0}</span>
           </div>
-          <div>
-            <div className="font-label-sm text-label-sm text-on-surface-variant mb-1">Пройдено экзаменов</div>
-            <div className="font-headline-md text-headline-md text-primary">14</div>
+          <div className="h-2 bg-white/20 rounded-full overflow-hidden">
+            <div className="h-full rounded-full bg-secondary transition-all" style={{ width: `${Math.min(quotaPercent, 100)}%` }} />
           </div>
-          <div>
-            <div className="font-label-sm text-label-sm text-on-surface-variant mb-1">Время подготовки</div>
-            <div className="font-headline-md text-headline-md text-primary">32ч</div>
-          </div>
+          <p className="mt-3 text-white/70 font-label-sm text-label-sm">Осталось: {dashboardSummary?.sessions_remaining ?? user?.sessions_remaining ?? 0} тренировочных сессий.</p>
         </div>
       </section>
 
-      {/* Material Uploader */}
       <MaterialUploader />
 
-      {/* История сессий - Spans 6 cols */}
-      <section className="col-span-1 md:col-span-6 glass-card rounded-xl p-6 w-full">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="font-headline-md text-[20px] text-on-surface">История сессий</h2>
-          <a href="#" className="font-label-sm text-label-sm text-secondary hover:underline">Показать все</a>
+      <section className="col-span-1 md:col-span-12 elevated-card rounded-2xl p-6 md:p-7 w-full">
+        <div className="flex justify-between items-center gap-4 mb-5">
+          <h2 className="font-headline-md text-[20px] text-on-surface">Последние сессии</h2>
+          <Link href="/exams" className="font-label-sm text-label-sm text-secondary hover:underline">Вся история</Link>
         </div>
-        <div className="flex flex-col gap-4">
-          <div className="border-l-4 border-l-tertiary-fixed-dim bg-surface-container-lowest p-4 rounded-r-lg shadow-sm">
-            <div className="flex justify-between items-start mb-2">
-              <div>
-                <h4 className="font-label-md text-label-md text-on-surface font-semibold">Мок-интервью: Основы программирования</h4>
-                <p className="font-label-sm text-label-sm text-on-surface-variant">Вчера, 14:30 • 45 мин</p>
-              </div>
-              <div className="bg-tertiary-container text-on-tertiary-container px-2 py-1 rounded font-label-sm text-label-sm">
-                Оценка: A-
-              </div>
-            </div>
-            <div className="w-full bg-surface-container-high rounded-full h-1.5 mt-3">
-              <div className="progress-bar-fill h-1.5 rounded-full" style={{ width: '88%' }}></div>
-            </div>
+        {interviewHistory.length === 0 ? (
+          <div className="rounded-xl bg-surface-container-low p-6 text-center">
+            <span className="material-symbols-outlined text-primary text-3xl">record_voice_over</span>
+            <p className="mt-2 text-on-surface font-label-md">Пока нет тренировочных сессий</p>
+            <p className="mt-1 text-on-surface-variant font-label-sm">Загрузите PDF и запустите первую тренировку.</p>
           </div>
-        </div>
+        ) : (
+          <div className="grid gap-3">
+            {interviewHistory.slice(0, 3).map((session) => (
+              <Link href={session.status === 'completed' ? `/report?session=${session.id}` : `/interview?session=${session.id}`} key={session.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-surface-container-low p-4 hover:bg-surface-container transition-colors">
+                <div><p className="font-label-md text-label-md text-on-surface">{session.material_title}</p><p className="font-label-sm text-label-sm text-on-surface-variant">{formatDate(session.created_at)} · {session.total_questions} вопросов</p></div>
+                <span className="rounded-full px-3 py-1 bg-primary-container text-on-primary-container font-label-sm text-label-sm">{session.status === 'completed' ? `Оценка: ${session.overall_score ?? '—'}` : 'Продолжить'}</span>
+              </Link>
+            ))}
+          </div>
+        )}
       </section>
     </div>
   );
+}
+
+function Metric({ icon, label, value, loading }: { icon: string; label: string; value: string | number; loading: boolean }) {
+  return <div className="rounded-xl border border-outline-variant/35 bg-white/70 p-4 transition-transform hover:-translate-y-0.5"><span className="material-symbols-outlined text-secondary">{icon}</span><p className="mt-3 text-on-surface-variant font-label-sm text-label-sm">{label}</p><p className="mt-1 text-primary font-headline-md text-[24px]">{loading ? '…' : value}</p></div>;
 }

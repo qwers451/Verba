@@ -11,7 +11,13 @@ from app.schemas.schemas import (
     FinalReportResponse,
     DialogItem,
     RecommendationTopic,
-    DocumentChunkResponse
+    DocumentChunkResponse,
+    DashboardSummaryResponse,
+    InterviewHistoryItemResponse,
+    MockCheckoutRequest,
+    PaymentResponse,
+    SubscriptionPlanResponse,
+    CheckoutResponse,
 )
 
 __all__ = [
@@ -27,5 +33,11 @@ __all__ = [
     "FinalReportResponse",
     "DialogItem",
     "RecommendationTopic",
-    "DocumentChunkResponse"
+    "DocumentChunkResponse",
+    "DashboardSummaryResponse",
+    "InterviewHistoryItemResponse",
+    "MockCheckoutRequest",
+    "PaymentResponse",
+    "SubscriptionPlanResponse",
+    "CheckoutResponse",
 ]
