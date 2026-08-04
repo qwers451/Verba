@@ -4,6 +4,7 @@ import React from 'react';
 import { useVerbaStore } from '@/store/useVerbaStore';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import Link from 'next/link';
 
 export const LandingPage: React.FC = () => {
   const { token, setAuthModalOpen } = useVerbaStore();
@@ -23,7 +24,7 @@ export const LandingPage: React.FC = () => {
       <header className="sticky top-0 z-50 border-b border-outline-variant/35 bg-white/85 backdrop-blur-xl w-full">
         <nav className="flex justify-between items-center w-full px-4 md:px-10 max-w-7xl mx-auto h-20">
           <div className="flex items-center gap-6">
-            <a className="flex items-center" href="#" aria-label="Verba AI — главная страница">
+            <Link className="flex items-center" href="/" aria-label="Verba AI — главная страница">
               <Image
                 src="/Verba_Logo_with_Speech_Bubbles_and_Book-removebg-preview.png"
                 alt="Verba AI"
@@ -32,9 +33,9 @@ export const LandingPage: React.FC = () => {
                 priority
               className="h-10 w-auto object-contain"
               />
-            </a>
+            </Link>
             <div className="hidden md:flex items-center gap-6 ml-8">
-              <a className="font-body-md text-body-md text-on-surface-variant hover:text-secondary transition-colors" href="#" onClick={handleStartClick}>Дашборд</a>
+              <Link className="font-body-md text-body-md text-on-surface-variant hover:text-secondary transition-colors" href="/dashboard" onClick={handleStartClick}>Дашборд</Link>
               <a className="font-body-md text-body-md text-on-surface-variant hover:text-secondary transition-colors" href="#features">Преимущества</a>
               <a className="font-body-md text-body-md text-on-surface-variant hover:text-secondary transition-colors" href="#pricing">Тарифы</a>
             </div>
@@ -156,7 +157,7 @@ export const LandingPage: React.FC = () => {
                 </div>
                 <h3 className="font-headline-md text-headline-md text-on-surface mb-3">Устные собеседования</h3>
                 <p className="font-body-md text-body-md text-on-surface-variant flex-grow">
-                  Проходите тренировочные сессии в формате диалога по загруженному материалу. Голосовой режим будет добавлен на следующих этапах.
+                  Проходите тренировочные сессии в формате диалога по загруженному материалу и отвечайте текстом или голосом.
                 </p>
                 <div className="mt-6 flex flex-col gap-3">
                   <div className="bg-surface-container-low p-3 rounded-lg rounded-tl-none self-start max-w-[85%]">
@@ -173,7 +174,7 @@ export const LandingPage: React.FC = () => {
                 </div>
                 <h3 className="font-headline-md text-headline-md text-on-surface mb-3">История подготовки</h3>
                 <p className="font-body-md text-body-md text-on-surface-variant flex-grow">
-                  Сохраняйте завершённые сессии и возвращайтесь к результатам. Интеллектуальная оценка и персональные рекомендации развиваются поэтапно.
+                  Сохраняйте завершённые сессии, возвращайтесь к результатам и получайте персональные рекомендации по повторению.
                 </p>
                 <div className="mt-6 grid grid-cols-2 gap-2">
                   <div className="bg-surface-container-low p-3 rounded-lg border-l-4 border-tertiary-fixed-dim">
@@ -207,7 +208,7 @@ export const LandingPage: React.FC = () => {
               <ul className="flex flex-col gap-4 mb-8">
                 <li className="flex items-start gap-3">
                   <span className="material-symbols-outlined text-tertiary-container text-[20px] mt-0.5" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
-                  <span className="font-body-md text-body-md text-on-surface">До 15 устных сессий (мок-интервью)</span>
+                  <span className="font-body-md text-body-md text-on-surface">До 15 тренировочных устных сессий</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <span className="material-symbols-outlined text-tertiary-container text-[20px] mt-0.5" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
@@ -239,9 +240,9 @@ export const LandingPage: React.FC = () => {
             © 2026 Verba AI. Подготовка к устным аттестациям.
           </div>
           <div className="flex flex-wrap justify-center md:justify-end gap-x-6 gap-y-2">
-            <a className="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors" href="#">Пользовательское соглашение</a>
-            <a className="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors" href="#">Политика конфиденциальности</a>
-            <a className="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors" href="#">Поддержка</a>
+            <Link className="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors" href="/terms">Пользовательское соглашение</Link>
+            <Link className="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors" href="/privacy">Политика конфиденциальности</Link>
+            <Link className="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors" href="/support">Поддержка</Link>
           </div>
         </div>
       </footer>

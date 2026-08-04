@@ -41,7 +41,7 @@ export interface InterviewHistoryItem {
   id: string;
   material_id: string;
   material_title: string;
-  status: 'in_progress' | 'completed';
+  status: 'created' | 'generating' | 'in_progress' | 'evaluating' | 'completed' | 'failed';
   overall_score?: number | null;
   total_questions: number;
   created_at: string;
@@ -70,10 +70,13 @@ export interface DialogItem {
   id: string;
   question_number: number;
   question_text: string;
+  topic?: string | null;
+  difficulty: 'easy' | 'medium' | 'hard';
   user_answer?: string | null;
   score?: number | null;
   feedback?: string | null;
   missed_concepts?: string[];
+  strengths?: string[];
   referenced_pages?: number[];
 }
 
@@ -81,7 +84,7 @@ export interface InterviewSession {
   id: string;
   material_id: string;
   material_title: string;
-  status: 'in_progress' | 'completed';
+  status: 'created' | 'generating' | 'in_progress' | 'evaluating' | 'completed' | 'failed';
   current_question_index: number;
   total_questions: number;
   overall_score?: number | null;
@@ -93,6 +96,7 @@ export interface AnswerEvaluation {
   question_number: number;
   score: number;
   feedback: string;
+  strengths: string[];
   missed_concepts: string[];
   referenced_pages: number[];
   is_last_question: boolean;

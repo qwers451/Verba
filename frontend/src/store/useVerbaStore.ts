@@ -10,7 +10,7 @@ interface VerbaState {
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, name: string) => Promise<void>;
   logout: () => void;
-  hydrateAuth: () => void;
+  hydrateAuth: () => Promise<void>;
 
   // User & Quota
   user: UserProfile | null;
@@ -45,7 +45,8 @@ interface VerbaState {
   currentQuestionIdx: number;
   latestEvaluation: AnswerEvaluation | null;
   isEvaluating: boolean;
-  startInterview: (materialId: string) => Promise<string | null>;
+  startInterview: (materialId: string, difficulty?: 'easy' | 'medium' | 'hard', totalQuestions?: number) => Promise<string | null>;
+  loadInterviewSession: (sessionId: string) => Promise<void>;
   submitAnswer: (answer: string) => Promise<boolean>;
   
   // Report
@@ -94,16 +95,21 @@ export const useVerbaStore = create<VerbaState>((set, get) => ({
     localStorage.removeItem('verba_token');
     set({ token: null, user: null, materials: [], activeSession: null, dashboardSummary: null, interviewHistory: [], plans: [], payments: [] });
   },
-  hydrateAuth: () => {
+  hydrateAuth: async () => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('verba_token') : null;
-    
-    if (token) {
-      set({ token });
-      get().fetchUser().catch(() => get().logout());
-      get().fetchMaterials();
-      get().fetchDashboard();
-      get().fetchPlans();
-      get().fetchPayments();
+    if (!token) return;
+
+    set({ token, isLoadingUser: true });
+    try {
+      const user = await api.getUserProfile();
+      set({ user, isLoadingUser: false });
+      await Promise.all([
+        get().fetchMaterials(), get().fetchDashboard(),
+        get().fetchPlans(), get().fetchPayments(),
+      ]);
+    } catch {
+      set({ isLoadingUser: false });
+      get().logout();
     }
   },
 
@@ -223,10 +229,10 @@ export const useVerbaStore = create<VerbaState>((set, get) => ({
   latestEvaluation: null,
   isEvaluating: false,
 
-  startInterview: async (materialId: string) => {
+  startInterview: async (materialId: string, difficulty = 'medium', totalQuestions = 5) => {
     set({ isStartingInterview: true, latestEvaluation: null, currentQuestionIdx: 0 });
     try {
-      const session = await api.startInterview(materialId, 5);
+      const session = await api.startInterview(materialId, totalQuestions, difficulty);
       set({
         activeSession: session,
         isStartingInterview: false,
@@ -238,6 +244,21 @@ export const useVerbaStore = create<VerbaState>((set, get) => ({
       alert(getApiErrorMessage(err, 'Не удалось начать сессию собеседования.'));
       set({ isStartingInterview: false });
       return null;
+    }
+  },
+
+  loadInterviewSession: async (sessionId: string) => {
+    set({ isStartingInterview: true, latestEvaluation: null });
+    try {
+      const session = await api.getInterviewSession(sessionId);
+      set({
+        activeSession: session,
+        currentQuestionIdx: Math.min(session.current_question_index, Math.max(0, session.dialogs.length - 1)),
+        isStartingInterview: false,
+      });
+    } catch (err) {
+      set({ isStartingInterview: false });
+      throw err;
     }
   },
 
@@ -264,6 +285,7 @@ export const useVerbaStore = create<VerbaState>((set, get) => ({
         score: evaluation.score,
         feedback: evaluation.feedback,
         missed_concepts: evaluation.missed_concepts,
+        strengths: evaluation.strengths,
         referenced_pages: evaluation.referenced_pages,
       };
 
@@ -277,6 +299,9 @@ export const useVerbaStore = create<VerbaState>((set, get) => ({
 
       set({
         activeSession: updatedSession,
+        currentQuestionIdx: evaluation.is_last_question
+          ? currentQuestionIdx
+          : currentQuestionIdx + 1,
         latestEvaluation: evaluation,
         isEvaluating: false,
       });
@@ -290,7 +315,7 @@ export const useVerbaStore = create<VerbaState>((set, get) => ({
     } catch (err: unknown) {
       console.error('Error submitting answer:', err);
       set({ isEvaluating: false });
-      return false;
+      throw new Error(getApiErrorMessage(err, 'Не удалось оценить ответ. Попробуйте ещё раз.'));
     }
   },
 
@@ -299,9 +324,13 @@ export const useVerbaStore = create<VerbaState>((set, get) => ({
   fetchReport: async (sessionId: string) => {
     set({ isLoadingReport: true });
     try {
-      const report = await api.getReport(sessionId);
+      const [report, session] = await Promise.all([
+        api.getReport(sessionId),
+        api.getInterviewSession(sessionId),
+      ]);
       set({
         finalReport: report,
+        activeSession: session,
         isLoadingReport: false,
       });
     } catch (err) {

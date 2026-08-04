@@ -10,12 +10,14 @@ import { useRouter } from 'next/navigation';
 export function MaterialsTab() {
   const { materials, deleteMaterial, startInterview, isStartingInterview } = useVerbaStore();
   const [viewingChunksFor, setViewingChunksFor] = React.useState<{id: string, title: string} | null>(null);
+  const [difficulty, setDifficulty] = React.useState<'easy' | 'medium' | 'hard'>('medium');
+  const [totalQuestions, setTotalQuestions] = React.useState(5);
   const router = useRouter();
 
   const handleStartInterview = async (materialId: string) => {
-    const sessionId = await startInterview(materialId);
+    const sessionId = await startInterview(materialId, difficulty, totalQuestions);
     if (sessionId) {
-      router.push('/interview');
+      router.push(`/interview?session=${sessionId}`);
     }
   };
 
@@ -49,6 +51,26 @@ export function MaterialsTab() {
       {/* Upload New Material Section */}
       <div className="w-full mb-6">
          <MaterialUploader />
+      </div>
+
+      <div className="glass-card rounded-xl p-4 flex flex-wrap items-center gap-4">
+        <span className="font-label-md text-on-surface">Настройки собеседования</span>
+        <label className="flex items-center gap-2 text-on-surface-variant">
+          Сложность
+          <select value={difficulty} onChange={(event) => setDifficulty(event.target.value as typeof difficulty)} className="rounded-lg bg-surface-container px-3 py-2 text-on-surface">
+            <option value="easy">Базовая</option>
+            <option value="medium">Средняя</option>
+            <option value="hard">Высокая</option>
+          </select>
+        </label>
+        <label className="flex items-center gap-2 text-on-surface-variant">
+          Вопросов
+          <select value={totalQuestions} onChange={(event) => setTotalQuestions(Number(event.target.value))} className="rounded-lg bg-surface-container px-3 py-2 text-on-surface">
+            <option value={3}>3</option>
+            <option value={5}>5</option>
+            <option value={10}>10</option>
+          </select>
+        </label>
       </div>
 
       {/* Materials Grid */}

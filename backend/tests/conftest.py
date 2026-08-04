@@ -33,6 +33,12 @@ async def client():
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         yield ac
 
+
+@pytest_asyncio.fixture(scope="function")
+async def db_session():
+    async with TestingSessionLocal() as session:
+        yield session
+
 @pytest_asyncio.fixture(scope="function")
 async def auth_headers():
     async with TestingSessionLocal() as session:

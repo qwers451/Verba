@@ -62,9 +62,9 @@ export default function DashboardPage() {
         ) : (
           <div className="grid gap-3">
             {interviewHistory.slice(0, 3).map((session) => (
-              <Link href={session.status === 'completed' ? `/report?session=${session.id}` : `/interview?session=${session.id}`} key={session.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-surface-container-low p-4 hover:bg-surface-container transition-colors">
+              <Link href={session.status === 'completed' ? `/report?session=${session.id}` : session.status === 'in_progress' ? `/interview?session=${session.id}` : '/materials'} key={session.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-surface-container-low p-4 hover:bg-surface-container transition-colors">
                 <div><p className="font-label-md text-label-md text-on-surface">{session.material_title}</p><p className="font-label-sm text-label-sm text-on-surface-variant">{formatDate(session.created_at)} · {session.total_questions} вопросов</p></div>
-                <span className="rounded-full px-3 py-1 bg-primary-container text-on-primary-container font-label-sm text-label-sm">{session.status === 'completed' ? `Оценка: ${session.overall_score ?? '—'}` : 'Продолжить'}</span>
+                <span className="rounded-full px-3 py-1 bg-primary-container text-on-primary-container font-label-sm text-label-sm">{session.status === 'completed' ? `Оценка: ${session.overall_score ?? '—'}` : session.status === 'in_progress' ? 'Продолжить' : session.status === 'failed' ? 'Создать заново' : 'Обработка'}</span>
               </Link>
             ))}
           </div>

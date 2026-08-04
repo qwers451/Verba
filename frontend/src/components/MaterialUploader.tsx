@@ -2,8 +2,11 @@
 
 import React, { useRef, useEffect } from 'react';
 import { useVerbaStore } from '@/store/useVerbaStore';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 export const MaterialUploader: React.FC = () => {
+  const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const {
     materials,
@@ -38,6 +41,11 @@ export const MaterialUploader: React.FC = () => {
       const file = e.dataTransfer.files[0];
       await uploadPdf(file);
     }
+  };
+
+  const handleStartInterview = async (materialId: string) => {
+    const sessionId = await startInterview(materialId);
+    if (sessionId) router.push(`/interview?session=${sessionId}`);
   };
 
   return (
@@ -77,6 +85,10 @@ export const MaterialUploader: React.FC = () => {
         )}
 
         <button 
+          onClick={(event) => {
+            event.stopPropagation();
+            fileInputRef.current?.click();
+          }}
           disabled={isUploading}
           className="w-full bg-secondary text-on-secondary rounded-lg py-3 px-4 flex items-center justify-center gap-2 hover:opacity-90 transition-opacity font-label-md text-label-md"
         >
@@ -89,9 +101,9 @@ export const MaterialUploader: React.FC = () => {
       <section className="col-span-1 md:col-span-6 glass-card rounded-xl p-6">
         <div className="flex justify-between items-center mb-6">
           <h2 className="font-headline-md text-[20px] text-on-surface">Мои материалы</h2>
-          <span className="font-label-sm text-label-sm text-secondary hover:underline cursor-pointer">
+          <Link href="/materials" className="font-label-sm text-label-sm text-secondary hover:underline">
             Все ({materials.length})
-          </span>
+          </Link>
         </div>
         
         <div className="flex flex-col gap-3">
@@ -121,13 +133,7 @@ export const MaterialUploader: React.FC = () => {
                         {mat.page_count} стр. • {mat.chunks_count} фрагментов
                       </p>
                     </div>
-                    {isSelected ? (
-                       <span className="material-symbols-outlined text-secondary">check_circle</span>
-                    ) : (
-                       <button className="text-on-surface-variant hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity">
-                         <span className="material-symbols-outlined">more_vert</span>
-                       </button>
-                    )}
+                    {isSelected && <span className="material-symbols-outlined text-secondary">check_circle</span>}
                   </div>
                   
                   {isSelected && (
@@ -136,7 +142,7 @@ export const MaterialUploader: React.FC = () => {
                        <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            startInterview(mat.id);
+                            void handleStartInterview(mat.id);
                           }}
                           disabled={isStartingInterview}
                           className="bg-primary text-on-primary rounded-lg py-2 px-4 flex items-center justify-center gap-2 hover:opacity-90 transition-opacity font-label-sm text-label-sm shadow-sm"

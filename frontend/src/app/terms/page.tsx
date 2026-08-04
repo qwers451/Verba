@@ -1,0 +1,5 @@
+import Link from 'next/link';
+
+export default function TermsPage() {
+  return <main className="min-h-screen bg-background px-4 py-12 text-on-surface"><article className="mx-auto max-w-3xl glass-card rounded-2xl p-8"><h1 className="font-headline-lg text-3xl">Пользовательское соглашение</h1><p className="mt-5 text-on-surface-variant">Verba AI предоставляет инструменты для самостоятельной подготовки к устным аттестациям. Результаты тренировок носят рекомендательный характер и не заменяют оценку преподавателя.</p><h2 className="mt-7 font-headline-md text-xl">Учебные материалы</h2><p className="mt-2 text-on-surface-variant">Пользователь подтверждает право использовать загружаемые материалы. Файлы обрабатываются для извлечения текста, поиска контекста и формирования тренировочных вопросов.</p><h2 className="mt-7 font-headline-md text-xl">Тестовые платежи</h2><p className="mt-2 text-on-surface-variant">На тестовом стенде используется тестовый режим ЮKassa без реального списания денежных средств.</p><Link href="/" className="inline-block mt-8 text-secondary hover:underline">Вернуться на главную</Link></article></main>;
+}

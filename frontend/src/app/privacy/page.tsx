@@ -1,0 +1,5 @@
+import Link from 'next/link';
+
+export default function PrivacyPage() {
+  return <main className="min-h-screen bg-background px-4 py-12 text-on-surface"><article className="mx-auto max-w-3xl glass-card rounded-2xl p-8"><h1 className="font-headline-lg text-3xl">Политика конфиденциальности</h1><p className="mt-5 text-on-surface-variant">Сервис обрабатывает данные аккаунта, загруженные учебные материалы, ответы и результаты тренировок только для предоставления функций подготовки.</p><h2 className="mt-7 font-headline-md text-xl">Обработка документов</h2><p className="mt-2 text-on-surface-variant">Фрагменты документов могут передаваться подключённому сервису интеллектуальной обработки для извлечения структуры, генерации вопросов и оценки ответов.</p><h2 className="mt-7 font-headline-md text-xl">Безопасность</h2><p className="mt-2 text-on-surface-variant">Ключи внешних сервисов не сохраняются в клиентском приложении. Доступ к личным материалам защищён авторизацией.</p><Link href="/" className="inline-block mt-8 text-secondary hover:underline">Вернуться на главную</Link></article></main>;
+}

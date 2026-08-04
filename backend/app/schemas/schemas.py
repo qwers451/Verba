@@ -1,5 +1,5 @@
 from pydantic import BaseModel, ConfigDict, Field, EmailStr
-from typing import List, Optional, Any
+from typing import List, Optional, Any, Literal
 from datetime import datetime
 
 # User Schemas
@@ -85,7 +85,10 @@ class DocumentChunkResponse(BaseModel):
     id: str
     material_id: str
     page_number: int
+    page_end: Optional[int] = None
     chunk_index: int
+    section_title: Optional[str] = None
+    token_count: int = 0
     content: str
     keywords: List[str]
 
@@ -96,10 +99,13 @@ class DialogItem(BaseModel):
     id: str
     question_number: int
     question_text: str
+    topic: Optional[str] = None
+    difficulty: str = "medium"
     user_answer: Optional[str] = None
     score: Optional[int] = None
     feedback: Optional[str] = None
     missed_concepts: Optional[List[str]] = None
+    strengths: Optional[List[str]] = None
     referenced_pages: Optional[List[int]] = None
 
     model_config = ConfigDict(from_attributes=True)
@@ -108,6 +114,7 @@ class DialogItem(BaseModel):
 class InterviewStartRequest(BaseModel):
     material_id: str
     total_questions: int = Field(default=5, ge=3, le=15)
+    difficulty: Literal["easy", "medium", "hard"] = "medium"
 
 class InterviewSessionResponse(BaseModel):
     id: str
@@ -125,12 +132,13 @@ class InterviewSessionResponse(BaseModel):
 class SubmitAnswerRequest(BaseModel):
     session_id: str
     question_number: int
-    user_answer: str
+    user_answer: str = Field(min_length=3, max_length=12000)
 
 class AnswerEvaluationResponse(BaseModel):
     question_number: int
     score: int # 0 to 100
     feedback: str
+    strengths: List[str]
     missed_concepts: List[str]
     referenced_pages: List[int]
     is_last_question: bool

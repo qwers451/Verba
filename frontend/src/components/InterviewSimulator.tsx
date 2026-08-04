@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { useVerbaStore } from '@/store/useVerbaStore';
 import { useRouter } from 'next/navigation';
 
@@ -22,6 +22,7 @@ interface SpeechRecognitionLike {
   onerror: (() => void) | null;
   onend: (() => void) | null;
   start: () => void;
+  stop: () => void;
 }
 
 interface SpeechRecognitionConstructor {
@@ -41,12 +42,15 @@ export const InterviewSimulator: React.FC = () => {
     currentQuestionIdx,
     submitAnswer,
     isEvaluating,
+    latestEvaluation,
     setVoiceModeActive,
   } = useVerbaStore();
   const router = useRouter();
 
   const [answerInput, setAnswerInput] = useState('');
   const [isListening, setIsListening] = useState(false);
+  const [answerError, setAnswerError] = useState<string | null>(null);
+  const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
 
   const startSpeechRecognition = () => {
     if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
@@ -58,6 +62,7 @@ export const InterviewSimulator: React.FC = () => {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!SpeechRecognition) return;
       const recognition = new SpeechRecognition();
+      recognitionRef.current = recognition;
       recognition.lang = 'ru-RU';
       recognition.interimResults = true;
       recognition.continuous = true;
@@ -83,6 +88,7 @@ export const InterviewSimulator: React.FC = () => {
       recognition.onend = () => {
         setIsListening(false);
         setVoiceModeActive(false);
+        recognitionRef.current = null;
       };
 
       recognition.start();
@@ -92,13 +98,34 @@ export const InterviewSimulator: React.FC = () => {
     }
   };
 
+  const stopSpeechRecognition = () => {
+    recognitionRef.current?.stop();
+    recognitionRef.current = null;
+    setIsListening(false);
+    setVoiceModeActive(false);
+  };
+
+  const toggleFullscreen = async () => {
+    if (document.fullscreenElement) {
+      await document.exitFullscreen();
+    } else {
+      await document.documentElement.requestFullscreen();
+    }
+  };
+
   const handleSendAnswer = async () => {
     if (!answerInput.trim() || isEvaluating) return;
     const currentText = answerInput;
-    setAnswerInput('');
-    const isFinished = await submitAnswer(currentText);
-    if (isFinished) {
-      router.push('/report');
+    setAnswerError(null);
+    try {
+      const isFinished = await submitAnswer(currentText);
+      setAnswerInput('');
+      if (isFinished) {
+        router.push(`/report?session=${activeSession?.id}`);
+      }
+    } catch (error) {
+      setAnswerInput(currentText);
+      setAnswerError(error instanceof Error ? error.message : 'Не удалось оценить ответ.');
     }
   };
 
@@ -126,7 +153,7 @@ export const InterviewSimulator: React.FC = () => {
               {activeSession.material_title}
             </h1>
           </div>
-          <button className="p-2 rounded-full hover:bg-surface-variant transition-colors text-on-surface-variant">
+          <button onClick={() => void toggleFullscreen()} className="p-2 rounded-full hover:bg-surface-variant transition-colors text-on-surface-variant" title="Полноэкранный режим">
             <span className="material-symbols-outlined">fullscreen</span>
           </button>
         </header>
@@ -183,12 +210,22 @@ export const InterviewSimulator: React.FC = () => {
               className="px-4 py-2 rounded-lg border border-error text-error hover:bg-error-container transition-colors font-label-md text-label-md flex items-center gap-2"
             >
               <span className="material-symbols-outlined text-sm">close</span>
-              <span className="hidden sm:inline">Завершить</span>
+              <span className="hidden sm:inline">Выйти</span>
             </button>
           </div>
         </header>
 
         <div className="flex-grow overflow-y-auto p-4 md:p-gutter space-y-6 flex flex-col pb-48">
+          {latestEvaluation && (
+            <div className="max-w-3xl self-stretch rounded-xl border border-secondary/30 bg-secondary-container/35 p-4">
+              <div className="flex items-center justify-between gap-3">
+                <span className="font-label-md text-on-surface">Предыдущий ответ оценён</span>
+                <span className="rounded-full bg-secondary px-3 py-1 text-on-secondary font-label-md">{latestEvaluation.score}/100</span>
+              </div>
+              <p className="mt-2 text-on-surface-variant">{latestEvaluation.feedback}</p>
+              {latestEvaluation.missed_concepts.length > 0 && <p className="mt-2 text-sm text-on-surface-variant">Повторить: {latestEvaluation.missed_concepts.join(', ')}</p>}
+            </div>
+          )}
           
           {/* Loop through all dialogs (we can show history, but here we just show current for simplicity, 
               actually it's better to show current question, user answer (if answered), and feedback (if evaluated) */}
@@ -214,6 +251,7 @@ export const InterviewSimulator: React.FC = () => {
 
         {/* Input Controls */}
         <div className="absolute bottom-0 left-0 right-0 p-4 md:p-gutter bg-gradient-to-t from-surface-bright via-surface-bright to-transparent pt-12">
+          {answerError && <div className="max-w-4xl mx-auto mb-3 rounded-xl bg-error-container px-4 py-3 text-on-error-container">{answerError}</div>}
           <div className="max-w-4xl mx-auto bg-surface-container-lowest rounded-2xl shadow-[0px_8px_30px_rgba(0,0,0,0.1)] border border-outline-variant/20 p-2 flex items-center gap-2 relative">
             
             {isListening && (
@@ -248,7 +286,7 @@ export const InterviewSimulator: React.FC = () => {
             </button>
 
             <button 
-              onClick={isListening ? () => setIsListening(false) : startSpeechRecognition}
+              onClick={isListening ? stopSpeechRecognition : startSpeechRecognition}
               className={`relative p-4 rounded-xl transition-all shadow-md group ${
                 isListening ? 'bg-error text-on-error hover:bg-error/90' : 'bg-primary text-on-primary hover:bg-primary/90'
               }`}

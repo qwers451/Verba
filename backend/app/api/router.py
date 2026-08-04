@@ -1,9 +1,10 @@
 import os
-import shutil
+import uuid
 from datetime import datetime, timezone
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Request, status
 from fastapi.responses import FileResponse
+from starlette.concurrency import run_in_threadpool
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import func, select
 
@@ -29,11 +30,9 @@ from app.schemas import (
 )
 from app.services.pdf_service import PDFProcessingService
 from app.services.rag_service import RAGService
-from app.services.llm_service import LLMService
+from app.services.interview_llm import InterviewProviderError, get_interview_provider
 from app.services.billing_service import FREE_PLAN_CODE, PRO_PLAN_CODE, get_plans, normalize_plan_code
 from app.services.yookassa_service import YooKassaConfigurationError, create_checkout, get_payment_status
-from langchain_core.documents import Document
-
 router = APIRouter()
 
 from app.api.auth import get_current_user
@@ -187,75 +186,75 @@ async def upload_material(
             detail="Поддерживаются только файлы формата PDF."
         )
 
-    # Create uploads dir if not exists
-    upload_dir = "./uploads"
+    upload_dir = settings.UPLOAD_DIR
     os.makedirs(upload_dir, exist_ok=True)
-    
-    file_location = os.path.join(upload_dir, f"{user.id}_{file.filename}")
-    
-    # Save file
-    with open(file_location, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
-
-    file_size = os.path.getsize(file_location)
-
-    # Extract text by pages
+    safe_filename = os.path.basename(file.filename)
+    file_location = os.path.join(upload_dir, f"{user.id}_{uuid.uuid4().hex}_{safe_filename}")
+    max_bytes = settings.MAX_FILE_SIZE_MB * 1024 * 1024
+    file_size = 0
     try:
-        pages_data = PDFProcessingService.extract_text_by_pages(file_location)
-        chunks = PDFProcessingService.create_chunks(pages_data)
-    except Exception as e:
+        with open(file_location, "wb") as buffer:
+            while data := await file.read(1024 * 1024):
+                file_size += len(data)
+                if file_size > max_bytes:
+                    raise ValueError(f"Размер PDF не должен превышать {settings.MAX_FILE_SIZE_MB} МБ.")
+                buffer.write(data)
+        with open(file_location, "rb") as source:
+            if source.read(5) != b"%PDF-":
+                raise ValueError("Файл не является корректным PDF.")
+        pages_data = await run_in_threadpool(PDFProcessingService.extract_text_by_pages, file_location)
+        chunks = await run_in_threadpool(PDFProcessingService.create_chunks, pages_data)
+        if not chunks:
+            raise ValueError("Не удалось сформировать чанки из документа.")
+    except Exception as exc:
         if os.path.exists(file_location):
             os.remove(file_location)
-        raise HTTPException(status_code=400, detail=f"Ошибка обработки PDF: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Ошибка обработки PDF: {exc}") from exc
 
-    # Create Material record
     material = Material(
         user_id=user.id,
-        title=file.filename.replace(".pdf", ""),
+        title=os.path.splitext(safe_filename)[0],
         file_path=file_location,
         file_size_bytes=file_size,
-        page_count=len(pages_data),
+        page_count=max(page["page_number"] for page in pages_data),
         chunks_count=len(chunks),
-        status="ready"
+        status="processing",
     )
-    db.add(material)
-    await db.commit()
-    await db.refresh(material)
-
-    # Save document chunks with vector embeddings
-    db_chunks = []
-    langchain_docs = []
-    
-    for chunk in chunks:
-        # We don't generate dummy embeddings anymore, save directly to sqlite
-        db_chunk = DocumentChunk(
-            material_id=material.id,
-            content=chunk["content"],
-            page_number=chunk["page_number"],
-            chunk_index=chunk["chunk_index"],
-            keywords=chunk["keywords"],
-            embedding_json={}
-        )
-        db_chunks.append(db_chunk)
-        
-        # Prepare for ChromaDB
-        langchain_docs.append(Document(
-            page_content=chunk["content"],
-            metadata={
-                "material_id": material.id,
-                "page_number": chunk["page_number"],
-                "chunk_index": chunk["chunk_index"]
-            }
-        ))
-
-    db.add_all(db_chunks)
-    await db.commit()
-    
-    # Save to ChromaDB
-    if langchain_docs:
-        vs = RAGService.get_vector_store()
-        vs.add_documents(langchain_docs)
-
+    index_attempted = False
+    try:
+        db.add(material)
+        await db.flush()
+        db.add_all([
+            DocumentChunk(
+                material_id=material.id,
+                content=chunk["content"],
+                page_number=chunk["page_number"],
+                page_end=chunk["page_end"],
+                chunk_index=chunk["chunk_index"],
+                section_title=chunk["section_title"],
+                token_count=chunk["token_count"],
+                content_hash=chunk["content_hash"],
+                keywords=chunk["keywords"],
+                embedding_json={},
+            )
+            for chunk in chunks
+        ])
+        await db.flush()
+        index_attempted = True
+        await run_in_threadpool(RAGService.index_chunks, material.id, chunks)
+        material.status = "ready"
+        await db.commit()
+        await db.refresh(material)
+    except Exception as exc:
+        await db.rollback()
+        if index_attempted:
+            try:
+                await run_in_threadpool(RAGService.delete_material, material.id)
+            except Exception:
+                pass
+        if os.path.exists(file_location):
+            os.remove(file_location)
+        raise HTTPException(status_code=503, detail="Не удалось завершить индексацию PDF.") from exc
     return material
 
 @router.get("/materials", response_model=List[MaterialResponse])
@@ -320,12 +319,7 @@ async def delete_material(
         
     # Delete from ChromaDB
     try:
-        vs = RAGService.get_vector_store()
-        # ChromaDB allows deleting by metadata filter in some versions, or we can just fetch and delete by ids.
-        # Let's try to get them first.
-        docs = vs.get(where={"material_id": material.id})
-        if docs and docs["ids"]:
-            vs.delete(ids=docs["ids"])
+        await run_in_threadpool(RAGService.delete_material, material.id)
     except Exception as e:
         print(f"Warning: Failed to delete vectors from ChromaDB: {e}")
 
@@ -348,57 +342,64 @@ async def start_interview(
             detail=f"Превышен лимит сессий ({user.monthly_sessions_limit} сессий в месяц). Обновите подписку за 690 руб/мес."
         )
 
-    # Fetch material
     material = await db.get(Material, payload.material_id)
     if not material or material.user_id != user.id:
         raise HTTPException(status_code=404, detail="Учебный материал не найден.")
+    if material.status != "ready":
+        raise HTTPException(status_code=409, detail="Учебный материал ещё не готов к собеседованию.")
 
     # Fetch chunks
     chunks_res = await db.execute(
         select(DocumentChunk).where(DocumentChunk.material_id == material.id).order_by(DocumentChunk.chunk_index)
     )
     chunks = chunks_res.scalars().all()
-    chunks_dicts = [
-        {
-            "content": c.content,
-            "page_number": c.page_number,
-            "keywords": c.keywords or []
-        }
-        for c in chunks
-    ]
-
-    # Generate exam questions
-    questions = await LLMService.generate_questions_for_material(chunks_dicts, payload.total_questions)
-
-    # Create interview session
     session = InterviewSession(
         user_id=user.id,
         material_id=material.id,
-        status="in_progress",
-        total_questions=len(questions),
-        current_question_index=0
+        status="generating",
+        total_questions=payload.total_questions,
+        difficulty=payload.difficulty,
+        current_question_index=0,
     )
     db.add(session)
     await db.commit()
     await db.refresh(session)
 
-    # Create dialog records for generated questions
-    dialogs = []
-    for q in questions:
-        dialog = InterviewDialog(
-            session_id=session.id,
-            question_number=q["question_number"],
-            question_text=q["question_text"],
-            expected_key_points=q.get("expected_key_points", []),
-            referenced_pages=q.get("referenced_pages", [1])
+    source_chunks = select_interview_source_chunks(chunks, payload.total_questions)
+    try:
+        provider = get_interview_provider()
+        generated = await provider.generate_questions(
+            material.title, source_chunks, payload.total_questions, payload.difficulty
         )
-        dialogs.append(dialog)
-
-    db.add_all(dialogs)
-    
-    # Increment user sessions used count
-    user.sessions_used_this_month += 1
-    await db.commit()
+        questions = generated.value.questions
+        session.llm_provider = generated.provider
+        session.llm_model = generated.model
+        session.status = "in_progress"
+        db.add_all([
+            InterviewDialog(
+                session_id=session.id,
+                question_number=question.question_number,
+                question_text=question.question_text,
+                topic=question.topic,
+                difficulty=question.difficulty,
+                expected_key_points=question.expected_key_points,
+                referenced_pages=question.referenced_pages,
+                llm_audit={
+                    "generation": {
+                        "provider": generated.provider, "model": generated.model,
+                        "prompt_version": generated.prompt_version,
+                        "duration_ms": generated.duration_ms, "retries": generated.retries,
+                    }
+                },
+            ) for question in questions
+        ])
+        user.sessions_used_this_month += 1
+        await db.commit()
+    except InterviewProviderError as exc:
+        session.status = "failed"
+        session.last_error = str(exc)[:2000]
+        await db.commit()
+        raise HTTPException(status_code=503, detail=f"Не удалось сформировать вопросы: {exc}") from exc
 
     # Load complete session with dialogs
     return await get_session_response(session.id, db)
@@ -443,6 +444,11 @@ async def submit_answer(
         raise HTTPException(status_code=404, detail="Сессия собеседования не найдена.")
     if session.user_id != user.id:
         raise HTTPException(status_code=404, detail="Сессия собеседования не найдена.")
+    if session.status != "in_progress":
+        raise HTTPException(status_code=409, detail="Сессия не готова к приёму ответа.")
+    expected_question = session.current_question_index + 1
+    if payload.question_number != expected_question:
+        raise HTTPException(status_code=409, detail=f"Сейчас ожидается ответ на вопрос {expected_question}.")
 
     # Find dialog item
     res = await db.execute(
@@ -453,27 +459,55 @@ async def submit_answer(
     dialog = res.scalars().first()
     if not dialog:
         raise HTTPException(status_code=404, detail="Вопрос не найден в данной сессии.")
+    if dialog.user_answer is not None:
+        raise HTTPException(status_code=409, detail="Ответ на этот вопрос уже сохранён.")
 
     # RAG Context retrieval for verification
     relevant_chunks = await RAGService.retrieve_relevant_chunks(
-        db, session.material_id, dialog.question_text, top_k=2
+        db,
+        session.material_id,
+        dialog.question_text,
+        top_k=3,
+        preferred_pages=dialog.referenced_pages or [],
     )
-    context_texts = [c[0].content for c in relevant_chunks]
-
-    # Evaluate answer via LLM Engine
-    eval_result = await LLMService.evaluate_answer(
-        question_text=dialog.question_text,
-        expected_points=dialog.expected_key_points or [],
-        user_answer=payload.user_answer,
-        referenced_pages=dialog.referenced_pages or [1],
-        context_chunks=context_texts
-    )
+    if not relevant_chunks:
+        raise HTTPException(status_code=422, detail="Не найден надёжный контекст для оценки ответа.")
+    context_data = [{
+        "content": chunk.content, "page_number": chunk.page_number,
+        "page_end": chunk.page_end or chunk.page_number, "section_title": chunk.section_title or "",
+        "relevance": score,
+    } for chunk, score in relevant_chunks]
+    session.status = "evaluating"
+    await db.commit()
+    try:
+        provider = get_interview_provider()
+        evaluated = await provider.evaluate_answer(
+            dialog.question_text, dialog.expected_key_points or [], payload.user_answer,
+            context_data, dialog.referenced_pages or [],
+        )
+        eval_result = evaluated.value
+    except InterviewProviderError as exc:
+        session.status = "in_progress"
+        session.last_error = str(exc)[:2000]
+        await db.commit()
+        raise HTTPException(status_code=503, detail=f"Не удалось оценить ответ: {exc}") from exc
 
     # Save user answer and evaluation to DB
     dialog.user_answer = payload.user_answer
-    dialog.score = eval_result["score"]
-    dialog.feedback = eval_result["feedback"]
-    dialog.missed_concepts = eval_result["missed_concepts"]
+    dialog.score = eval_result.score
+    dialog.feedback = eval_result.feedback
+    dialog.missed_concepts = eval_result.missed_concepts
+    dialog.strengths = eval_result.strengths
+    dialog.llm_audit = {
+        **(dialog.llm_audit or {}),
+        "evaluation": {
+            "provider": evaluated.provider, "model": evaluated.model,
+            "prompt_version": evaluated.prompt_version,
+            "duration_ms": evaluated.duration_ms, "retries": evaluated.retries,
+            "retrieved_chunks": [item[0].id for item in relevant_chunks],
+            "relevance_scores": [item[1] for item in relevant_chunks],
+        },
+    }
 
     # Update session progress
     if session.current_question_index < payload.question_number:
@@ -482,25 +516,35 @@ async def submit_answer(
     # Check if this was the last question
     is_last = payload.question_number >= session.total_questions
     if is_last:
-        session.status = "completed"
-        session.completed_at = datetime.now(timezone.utc)
-        # Calculate overall score
+        await db.flush()
         all_dialogs_res = await db.execute(
-            select(InterviewDialog).where(InterviewDialog.session_id == session.id)
+            select(InterviewDialog).where(InterviewDialog.session_id == session.id).order_by(InterviewDialog.question_number)
         )
         all_d = all_dialogs_res.scalars().all()
         scores = [d.score for d in all_d if d.score is not None]
-        if scores:
-            session.overall_score = round(sum(scores) / len(scores), 1)
+        session.overall_score = round(sum(scores) / len(scores), 1) if scores else 0.0
+        report_input = [dialog_to_report_data(item) for item in all_d]
+        try:
+            report_result = await provider.generate_report(material_title=(await db.get(Material, session.material_id)).title, dialogs=report_input)
+            session.summary_report = report_result.value.model_dump()
+            session.summary_report["overall_score"] = session.overall_score
+        except InterviewProviderError as exc:
+            session.last_error = f"Итоговый отчёт: {exc}"[:2000]
+            session.summary_report = fallback_report(report_input, session.overall_score)
+        session.status = "completed"
+        session.completed_at = datetime.now(timezone.utc)
+    else:
+        session.status = "in_progress"
 
     await db.commit()
 
     return AnswerEvaluationResponse(
         question_number=dialog.question_number,
-        score=eval_result["score"],
-        feedback=eval_result["feedback"],
-        missed_concepts=eval_result["missed_concepts"],
-        referenced_pages=dialog.referenced_pages or [1],
+        score=eval_result.score,
+        feedback=eval_result.feedback,
+        strengths=eval_result.strengths,
+        missed_concepts=eval_result.missed_concepts,
+        referenced_pages=eval_result.recommended_pages or dialog.referenced_pages or [1],
         is_last_question=is_last
     )
 
@@ -538,17 +582,22 @@ async def get_interview_report(
         for d in dialogs
     ]
 
-    report = LLMService.synthesize_report(material_title, dialogs_dicts)
+    if session.status != "completed":
+        raise HTTPException(status_code=409, detail="Итоговый отчёт доступен после завершения собеседования.")
+    report = session.summary_report or fallback_report(dialogs_dicts, session.overall_score or 0.0)
     
     dialog_items = [
         DialogItem(
             id=d.id,
             question_number=d.question_number,
             question_text=d.question_text,
+            topic=d.topic,
+            difficulty=d.difficulty,
             user_answer=d.user_answer,
             score=d.score,
             feedback=d.feedback,
             missed_concepts=d.missed_concepts or [],
+            strengths=d.strengths or [],
             referenced_pages=d.referenced_pages or [1]
         )
         for d in dialogs
@@ -583,10 +632,13 @@ async def get_session_response(session_id: str, db: AsyncSession) -> InterviewSe
             id=d.id,
             question_number=d.question_number,
             question_text=d.question_text,
+            topic=d.topic,
+            difficulty=d.difficulty,
             user_answer=d.user_answer,
             score=d.score,
             feedback=d.feedback,
             missed_concepts=d.missed_concepts or [],
+            strengths=d.strengths or [],
             referenced_pages=d.referenced_pages or [1]
         )
         for d in dialogs
@@ -609,3 +661,44 @@ async def ensure_session_owner(session_id: str, user_id: str, db: AsyncSession) 
     if not session or session.user_id != user_id:
         raise HTTPException(status_code=404, detail="Сессия не найдена.")
     return session
+
+
+def select_interview_source_chunks(chunks: List[DocumentChunk], total_questions: int) -> list[dict]:
+    excluded = ("оглавление", "содержание", "список литературы", "библиограф")
+    useful = [chunk for chunk in chunks if chunk.token_count >= 50 and not any(
+        marker in (chunk.section_title or "").lower() for marker in excluded
+    )]
+    pool = useful or chunks
+    limit = min(len(pool), max(total_questions * 4, 12), 28)
+    if not pool:
+        raise HTTPException(status_code=422, detail="В материале нет текста для генерации вопросов.")
+    indexes = sorted({min(len(pool) - 1, int(index * len(pool) / limit)) for index in range(limit)})
+    return [{
+        "chunk_index": chunk.chunk_index, "content": chunk.content,
+        "page_number": chunk.page_number, "page_end": chunk.page_end or chunk.page_number,
+        "section_title": chunk.section_title or "", "keywords": chunk.keywords or [],
+    } for chunk in (pool[index] for index in indexes)]
+
+
+def dialog_to_report_data(dialog: InterviewDialog) -> dict:
+    return {
+        "question_number": dialog.question_number, "question_text": dialog.question_text,
+        "topic": dialog.topic, "score": dialog.score or 0, "feedback": dialog.feedback or "",
+        "strengths": dialog.strengths or [], "missed_concepts": dialog.missed_concepts or [],
+        "referenced_pages": dialog.referenced_pages or [],
+    }
+
+
+def fallback_report(dialogs: list[dict], overall_score: float) -> dict:
+    topics = [{
+        "topic": item.get("topic") or item.get("question_text", "Тема")[:80],
+        "status": "strong" if item.get("score", 0) >= 80 else "medium" if item.get("score", 0) >= 60 else "weak",
+        "pages": item.get("referenced_pages") or [],
+        "advice": "Повторите ключевые тезисы и сформулируйте ответ своими словами.",
+    } for item in dialogs]
+    return {
+        "overall_score": overall_score,
+        "grade_label": "Отлично" if overall_score >= 85 else "Хорошо" if overall_score >= 70 else "Требует повторения",
+        "topics_breakdown": topics,
+        "key_recommendations": ["Повторите темы с наименьшими баллами и пройдите тренировку повторно."],
+    }

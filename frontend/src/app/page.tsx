@@ -9,7 +9,7 @@ export default function Home() {
   const { hydrateAuth } = useVerbaStore();
 
   useEffect(() => {
-    hydrateAuth();
+    void hydrateAuth();
   }, [hydrateAuth]);
 
   return (

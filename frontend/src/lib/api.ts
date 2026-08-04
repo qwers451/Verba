@@ -105,10 +105,11 @@ export const api = {
     return res.data;
   },
 
-  startInterview: async (materialId: string, totalQuestions: number = 5): Promise<InterviewSession> => {
+  startInterview: async (materialId: string, totalQuestions: number = 5, difficulty: 'easy' | 'medium' | 'hard' = 'medium'): Promise<InterviewSession> => {
     const res = await apiClient.post('/interviews/start', {
       material_id: materialId,
       total_questions: totalQuestions,
+      difficulty,
     });
     return res.data;
   },

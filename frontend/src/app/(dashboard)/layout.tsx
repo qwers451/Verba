@@ -1,12 +1,12 @@
 import Sidebar from '@/components/Sidebar';
 import Link from 'next/link';
 import { AuthModal } from '@/components/AuthModal';
-import { AuthBootstrap } from '@/components/AuthBootstrap';
+import { AuthGate } from '@/components/AuthGate';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
+    <AuthGate>
     <div className="app-shell flex min-h-screen relative w-full overflow-hidden">
-      <AuthBootstrap />
       {/* Sidebar for Navigation */}
       <Sidebar />
 
@@ -29,5 +29,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </main>
       <AuthModal />
     </div>
+    </AuthGate>
   );
 }
